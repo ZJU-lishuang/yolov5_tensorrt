@@ -1,0 +1,61 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_6846a/fast && /usr/bin/make -f CMakeFiles/cmTC_6846a.dir/build.make CMakeFiles/cmTC_6846a.dir/build
+make[1]: 进入目录“/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_6846a.dir/src.c.o
+/usr/bin/cc   -fPIC -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_6846a.dir/src.c.o   -c /home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_6846a
+/home/lishuang/Disk/software/cmake-3.17.3587832-MSVC_2-Linux-x64/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6846a.dir/link.txt --verbose=1
+/usr/bin/cc -fPIC -DCMAKE_HAVE_LIBC_PTHREAD    CMakeFiles/cmTC_6846a.dir/src.c.o  -o cmTC_6846a 
+CMakeFiles/cmTC_6846a.dir/src.c.o：在函数‘main’中：
+src.c:(.text+0x2f)：对‘pthread_create’未定义的引用
+src.c:(.text+0x3b)：对‘pthread_detach’未定义的引用
+src.c:(.text+0x47)：对‘pthread_cancel’未定义的引用
+src.c:(.text+0x58)：对‘pthread_join’未定义的引用
+src.c:(.text+0x6c)：对‘pthread_atfork’未定义的引用
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_6846a.dir/build.make:104：cmTC_6846a] 错误 1
+make[1]: 离开目录“/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp”
+make: *** [Makefile:138：cmTC_6846a/fast] 错误 2
+
+
+Source file was:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_4ea33/fast && /usr/bin/make -f CMakeFiles/cmTC_4ea33.dir/build.make CMakeFiles/cmTC_4ea33.dir/build
+make[1]: 进入目录“/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_4ea33.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_4ea33.dir/CheckFunctionExists.c.o   -c /home/lishuang/Disk/software/cmake-3.17.3587832-MSVC_2-Linux-x64/share/cmake-3.17/Modules/CheckFunctionExists.c
+Linking C executable cmTC_4ea33
+/home/lishuang/Disk/software/cmake-3.17.3587832-MSVC_2-Linux-x64/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4ea33.dir/link.txt --verbose=1
+/usr/bin/cc -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_4ea33.dir/CheckFunctionExists.c.o  -o cmTC_4ea33  -lpthreads 
+/usr/bin/ld: 找不到 -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_4ea33.dir/build.make:104：cmTC_4ea33] 错误 1
+make[1]: 离开目录“/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/CMakeTmp”
+make: *** [Makefile:138：cmTC_4ea33/fast] 错误 2
+
+
+

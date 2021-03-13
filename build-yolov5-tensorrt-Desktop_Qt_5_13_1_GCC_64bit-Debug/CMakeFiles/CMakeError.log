@@ -1,0 +1,51 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/lishuang/Disk/remote/yolov5-tensorrt/build-yolov5-tensorrt-Desktop_Qt_5_13_1_GCC_64bit-Debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/home/lishuang/Disk/software/anaconda3/bin/ninja cmTC_cc513 && [1/2] Building C object CMakeFiles/cmTC_cc513.dir/src.c.o
+[2/2] Linking C executable cmTC_cc513
+FAILED: cmTC_cc513 
+: && /usr/bin/gcc -fPIC -DCMAKE_HAVE_LIBC_PTHREAD   CMakeFiles/cmTC_cc513.dir/src.c.o  -o cmTC_cc513   && :
+CMakeFiles/cmTC_cc513.dir/src.c.o：在函数‘main’中：
+src.c:(.text+0x2f)：对‘pthread_create’未定义的引用
+src.c:(.text+0x3b)：对‘pthread_detach’未定义的引用
+src.c:(.text+0x47)：对‘pthread_cancel’未定义的引用
+src.c:(.text+0x58)：对‘pthread_join’未定义的引用
+src.c:(.text+0x6c)：对‘pthread_atfork’未定义的引用
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+Source file was:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/lishuang/Disk/remote/yolov5-tensorrt/build-yolov5-tensorrt-Desktop_Qt_5_13_1_GCC_64bit-Debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/home/lishuang/Disk/software/anaconda3/bin/ninja cmTC_8ae40 && [1/2] Building C object CMakeFiles/cmTC_8ae40.dir/CheckFunctionExists.c.o
+[2/2] Linking C executable cmTC_8ae40
+FAILED: cmTC_8ae40 
+: && /usr/bin/gcc -fPIC -DCHECK_FUNCTION_EXISTS=pthread_create   CMakeFiles/cmTC_8ae40.dir/CheckFunctionExists.c.o  -o cmTC_8ae40  -lpthreads && :
+/usr/bin/ld: 找不到 -lpthreads
+collect2: error: ld returned 1 exit status
+ninja: build stopped: subcommand failed.
+
+
+

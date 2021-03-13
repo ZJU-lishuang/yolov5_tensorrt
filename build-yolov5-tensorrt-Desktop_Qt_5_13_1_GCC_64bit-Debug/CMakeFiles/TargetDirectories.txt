@@ -1,0 +1,4 @@
+/home/lishuang/Disk/remote/yolov5-tensorrt/build-yolov5-tensorrt-Desktop_Qt_5_13_1_GCC_64bit-Debug/CMakeFiles/edit_cache.dir
+/home/lishuang/Disk/remote/yolov5-tensorrt/build-yolov5-tensorrt-Desktop_Qt_5_13_1_GCC_64bit-Debug/CMakeFiles/rebuild_cache.dir
+/home/lishuang/Disk/remote/yolov5-tensorrt/build-yolov5-tensorrt-Desktop_Qt_5_13_1_GCC_64bit-Debug/CMakeFiles/yolo5trt.dir
+/home/lishuang/Disk/remote/yolov5-tensorrt/build-yolov5-tensorrt-Desktop_Qt_5_13_1_GCC_64bit-Debug/CMakeFiles/yolov5tensorrt.dir

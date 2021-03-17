@@ -1,4 +1,0 @@
-/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/edit_cache.dir
-/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/rebuild_cache.dir
-/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/yolo5trt.dir
-/home/lishuang/Disk/remote/yolov5-tensorrt/build/CMakeFiles/yolov5tensorrt.dir

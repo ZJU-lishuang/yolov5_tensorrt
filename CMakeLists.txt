@@ -8,7 +8,7 @@ project(yolov5tensorrt)
 # message(STATUS "Project_binary_dir : ${PROJECT_BINARY_DIR}")
 
 #自定义opencv路径
-set(OpenCV_DIR /home/lishuang/Disk/remote/opencv-4.4.0/build)
+set(OpenCV_DIR /home/ls/softwares/opencv-4.5.1/build)
 # find opencv
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS})
@@ -26,7 +26,7 @@ message(STATUS "CUDA_INCLUDE_DIRS => ${CUDA_INCLUDE_DIRS}")
 include_directories("/usr/local/cuda/include")
 link_directories("/usr/local/cuda/lib64" "/usr/lib" /usr/lib/x86_64-linux-gnu )
 #tensorrt
-set(TensorRT_DIR /home/lishuang/Disk/software/TensorRT-7.0.0.11)
+set(TensorRT_DIR /home/ls/softwares/TensorRT-7.2.3.4)
 if(DEFINED TensorRT_DIR)
   include_directories("${TensorRT_DIR}/include")
   link_directories("${TensorRT_DIR}/lib")
@@ -36,7 +36,7 @@ message(STATUS "TensorRT Header => ${tensorrt_dir}/include")
 message(STATUS "TensorRT Lib => ${tensorrt_dir}/lib")
 
 #本地头文件
-set(project_dir /home/lishuang/Disk/remote/yolov5-tensorrt)
+set(project_dir /home/ls/projects/yolov5_tensorrt)
 #链接头文件目录
 include_directories(${project_dir}/include)
 #链接库目录

@@ -384,8 +384,8 @@ void NmsDetect(std::vector<DetectRes> &detections) {
 
 int main()
 {
-    std::string onnxPath = "../model/yolov5l.sim.onnx";
-    std::string save_path="../model/yolov5l.serialized";
+    std::string onnxPath = "../yolov5_tensorrt/model/yolov5s.onnx";
+    std::string save_path="../yolov5_tensorrt/model/yolov5s.serialized";
     nvinfer1::ICudaEngine *engine = nullptr;
 
     std::fstream existEngine;
@@ -407,7 +407,7 @@ int main()
     assert(context != nullptr);
 
     std::cout<< "Preparing data..." << std::endl;
-    cv::Mat image = cv::imread("../images/coco_1.jpg");
+    cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
     auto dims = engine->getBindingDimensions(0);
     std::vector<int> inputSize={dims.d[2],dims.d[3]};
     cv::resize(image, image, cv::Size(inputSize[1], inputSize[0]));
@@ -476,23 +476,24 @@ int main()
     cudaStreamSynchronize(stream);
 
     std::vector<DetectRes> result;
-    int index=0;
-    float *output1=out1+index*outSize1;
-    int position=0;
+    float *output1=out1;
+    float *output2=out2;
+    float *output3=out3;
+    std::vector<float *> output={out1,out2,out3};
+    
     int ratio=1;
-//    std::vector<int> stride = std::vector<int> {8, 16, 32};
-    std::vector<int> stride = std::vector<int> {32, 16, 8};
+    std::vector<int> stride = std::vector<int> {8, 16, 32};
     std::vector<std::vector<int>> grids = {
                 {3, int(IMAGE_WIDTH / stride[0]), int(IMAGE_HEIGHT / stride[0])},
                 {3, int(IMAGE_WIDTH / stride[1]), int(IMAGE_HEIGHT / stride[1])},
                 {3, int(IMAGE_WIDTH / stride[2]), int(IMAGE_HEIGHT / stride[2])},
         };
-//    std::vector<std::vector<int>> anchors={{10,13}, {16,30}, {33,23}, {30,61}, {62,45}, {59,119}, {116,90}, {156,198}, {373,326}};
-    std::vector<std::vector<int>> anchors={{116,90}, {156,198}, {373,326},{30,61}, {62,45}, {59,119}, {10,13}, {16,30}, {33,23}};
+    std::vector<std::vector<int>> anchors={{10,13}, {16,30}, {33,23}, {30,61}, {62,45}, {59,119}, {116,90}, {156,198}, {373,326}};
     for(int n=0;n<(int)grids.size();n++)
     {
-        if (n>0)
-            break;
+//        if (n>0)
+//            break;
+        int position=0;
         for(int c=0;c<grids[n][0];c++)
         {
             std::vector<int> anchor=anchors[n*grids[n][0]+c];
@@ -500,7 +501,8 @@ int main()
             {
                 for(int w=0;w<grids[n][2];w++)
                 {
-                    float *row=output1+position*(80+5);
+                    // float *row=output1+position*(80+5);
+                    float *row=output[n]+position*(80+5);
                     position++;
                     DetectRes box;
                     auto max_pos=std::max_element(row+5,row+80+5);
@@ -531,7 +533,7 @@ int main()
         cv::putText(image, std::to_string(score), cv::Point(xmin, ymin), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,204,255));
     }
 
-    cv::imwrite("../images/render.jpg", image);
+    cv::imwrite("../yolov5_tensorrt/images/render.jpg", image);
 
 
 
@@ -542,169 +544,3 @@ int main()
 
 
 }
-
-int main123()
-{
-    //tensorrt7.0
-    // TrtUniquePtr<IBuilder> builder{createInferBuilder(gLogger.getTRTLogger())};
-
-    //retinanet-example
-    // Logger logger(verbose);
-    // auto builder = createInferBuilder(logger);
-
-    std::string onnxPath = "../model/yolov5l.sim.onnx";
-
-    //2.2.5. Importing An ONNX Model Using The C++ Parser API
-    //使用指针 创建tensorrt构造器  createInferBuilder
-    auto builder = UniquePtr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(gLogger.getTRTLogger()));
-    if (!builder){
-        gLogError << "Create Builder Failed" << std::endl;
-        return false;
-    }
-
-    //构建网络 createNetworkV2 ，tensorrt仅支持全尺寸模式，使用explicitBatch
-    const auto explicitBatch = 1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
-    auto network = UniquePtr<nvinfer1::INetworkDefinition>(builder->createNetworkV2(explicitBatch));
-    if (!network){
-        gLogError << "Create Network Failed" << std::endl;
-        return false;
-    }
-
-    //创建onnx解析器
-    auto parser = UniquePtr<nvonnxparser::IParser>(nvonnxparser::createParser(*network, gLogger.getTRTLogger()));
-    if (!parser){
-        gLogError << "Create Parser Failed" << std::endl;
-        return false;
-    }
-
-    //解析onnx，提取模型
-    if (!parser->parseFromFile(onnxPath.c_str(), static_cast<int>(gLogger.getReportableSeverity()))){
-        gLogError << "Parsing File Failed" << std::endl;
-        return false;
-    }
-    //2.3. Building An Engine In C++
-    int maxBatchSize=1;
-    builder->setMaxBatchSize(maxBatchSize);
-    //create config
-    auto config = UniquePtr<nvinfer1::IBuilderConfig>(builder->createBuilderConfig());
-    if (!config){
-        gLogError << "Create Config Failed" << std::endl;
-        return false;
-    }
-    config->setMaxWorkspaceSize(1 << 20);
-    auto mCudaEngine = std::shared_ptr<nvinfer1::ICudaEngine>(builder->buildEngineWithConfig(*network, *config),common::InferDeleter());
-    if (!mCudaEngine){
-        gLogError << "Create Engine Failed" << std::endl;
-        return false;
-    }
-    //2.4. Serializing A Model In C++
-    //web
-    // IHostMemory *serializedModel = engine->serialize();
-    std::string save_path="../model/yolov5l.serialized";
-    nvinfer1::IHostMemory *gie_model_stream = mCudaEngine -> serialize();
-    // store model to disk
-    std::ofstream serialize_output_stream;
-    std::string serialize_str;
-    serialize_str.resize(gie_model_stream->size());
-    memcpy((void*)serialize_str.data(),gie_model_stream->data(), gie_model_stream->size());
-    serialize_output_stream.open(save_path);
-    if(!serialize_output_stream.good()){
-        gLogError << "Serializing Engine Failed" << std::endl;
-        return false;
-    }
-    serialize_output_stream<<serialize_str;
-    serialize_output_stream.close();
-
-    // gie_model_stream->destroy();
-    
-    // IRuntime* runtime = createInferRuntime(gLogger);
-    // ICudaEngine* engine = runtime->deserializeCudaEngine(modelData, modelSize, nullptr);
-
-    //2.5. Performing Inference In C++
-    auto mContext = UniquePtr<nvinfer1::IExecutionContext>(mCudaEngine->createExecutionContext());
-    if(!mContext){
-        gLogError << "Create Context Failed" << std::endl;
-        return false;
-    }
-
-    cv::Mat image = cv::imread("../images/coco_1.jpg");
-
-    // common::InputParams mInputParams;
-    // initInputParams(mInputParams);
-
-    common::BufferManager bufferManager(mCudaEngine, 1);
-
-    std::vector<float> preImg = preProcess(std::vector<cv::Mat>{image});
-
-    // float elapsedTime = infer(std::vector<std::vector<float>>{preImg}, bufferManager);
-    const std::vector<std::vector<float>> InputDatas=std::vector<std::vector<float>>{preImg};
-    cudaStream_t stream= nullptr;
-    common::InputParams mInputParams;
-    initInputParams(mInputParams);
-    //infer
-    assert(InputDatas.size()==mInputParams.InputTensorNames.size());
-    for(int i=0; i<InputDatas.size(); ++i){
-        std::memcpy((void*)bufferManager.getHostBuffer(mInputParams.InputTensorNames[i]), (void*)InputDatas[i].data(), InputDatas[i].size() * sizeof(float));
-    }
-    bufferManager.copyInputToDeviceAsync();
-    if (!mContext->enqueue(mInputParams.BatchSize, bufferManager.getDeviceBindings().data(), stream, nullptr)) {
-        gLogError << "Execute Failed!" << std::endl;
-        return false;
-    }
-    bufferManager.copyOutputToHostAsync();
-
-    //postprocess
-    common::DetectParams mDetectParams;
-    initDetectParams(mDetectParams);
-    float postThres = 0.6;
-    float nmsThres = 0.5;
-    assert(mInputParams.BatchSize==1);
-    std::vector<common::Bbox> bboxes;
-    common::Bbox bbox;
-    float cx, cy, w_b, h_b, score;
-    int cid;
-    for (int scale_idx=0; scale_idx<mInputParams.OutputTensorNames.size(); ++scale_idx) {
-        const int stride = mDetectParams.Strides[scale_idx];
-        const int width = (mInputParams.ImgW +stride-1)/ stride;
-        const int height = (mInputParams.ImgH +stride-1) / stride;
-        auto *origin_output = static_cast<const float *>(bufferManager.getHostBuffer(
-                mInputParams.OutputTensorNames[scale_idx]));
-        unsigned long start = 0;
-        const unsigned long length = height;
-        unsigned long pos = start * width * mDetectParams.AnchorPerScale * (5+mDetectParams.NumClass);
-        const float *ptr = origin_output + pos;
-        for(unsigned long h=start; h<start+length; ++h){
-            for(unsigned long w=0; w<width; ++w){
-                for(unsigned long a=0; a<mDetectParams.AnchorPerScale; ++a){
-                    const float *cls_ptr =  ptr + 5;
-                    cid = argmax(cls_ptr, cls_ptr+mDetectParams.NumClass);
-                    score = sigmoid(ptr[4]) * sigmoid(cls_ptr[cid]);
-                    if(score>=postThres){
-                        cx = (sigmoid(ptr[0]) * 2.f - 0.5f + static_cast<float>(w)) * static_cast<float>(mDetectParams.Strides[scale_idx]);
-                        cy = (sigmoid(ptr[1]) * 2.f - 0.5f + static_cast<float>(h)) * static_cast<float>(mDetectParams.Strides[scale_idx]);
-                        w_b = powf(sigmoid(ptr[2]) * 2.f, 2) * mDetectParams.Anchors[scale_idx * mDetectParams.AnchorPerScale + a].width;
-                        h_b = powf(sigmoid(ptr[3]) * 2.f, 2) * mDetectParams.Anchors[scale_idx * mDetectParams.AnchorPerScale + a].height;
-                        bbox.xmin = clip(cx - w_b / 2, 0.f, static_cast<float>(mInputParams.ImgW - 1));
-                        bbox.ymin = clip(cy - h_b / 2, 0.f, static_cast<float>(mInputParams.ImgH - 1));
-                        bbox.xmax = clip(cx + w_b / 2, 0.f, static_cast<float>(mInputParams.ImgW - 1));
-                        bbox.ymax = clip(cy + h_b / 2, 0.f, static_cast<float>(mInputParams.ImgH - 1));
-                        bbox.score = score;
-                        bbox.cid = cid;
-                        safePushBack(&bboxes, &bbox);
-                    }
-                    ptr += 5 + mDetectParams.NumClass;
-                }
-            }
-        }
-    }
-    nms_cpu(bboxes, nmsThres);
-
-    transform(image.rows, image.cols, mInputParams.ImgH, mInputParams.ImgW, bboxes, mInputParams.IsPadding);
-
-    image = renderBoundingBox(image, bboxes);
-
-    printf("hello world\n");
-    cv::imwrite("../images/render.jpg", image);
-    return 0;
-}
-

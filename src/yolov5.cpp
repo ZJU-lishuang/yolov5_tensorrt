@@ -1,21 +1,10 @@
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include "common.h"
+#include "yolov5.h"
 #include "logger.h"
 #include <NvOnnxParser.h>
-#include "NvInfer.h"
-#include <fstream>
+#include <cuda_runtime_api.h>
 #include <numeric>
 
-#include "buffers.h"
-#include "utils.h"
-#include "yolov5.h"
-
-int BATCH_SIZE=1;
-int IMAGE_WIDTH=640;
-int IMAGE_HEIGHT=640;
-int INPUT_CHANNEL=3;
+__device__ float Logist(float data) { return 1.0f / (1.0f + expf(-data)); };
 
 inline int64_t volume(const nvinfer1::Dims& d)
 {
@@ -36,9 +25,20 @@ inline unsigned int getElementSize(nvinfer1::DataType t)
     return 0;
 }
 
-void onnxToTrtModel(const std::string &modelfile,
+
+
+YOLOv5::YOLOv5(std::string config_file){
+    onnxPath = "../yolov5_tensorrt/model/yolov5s.onnx";
+    save_path="../yolov5_tensorrt/model/yolov5s.serialized";
+    v5BATCH_SIZE=1;
+
+}
+
+YOLOv5::~YOLOv5() = default;
+
+void YOLOv5::v5onnxToTrtModel(const std::string &modelfile,
                     const std::string &filename,
-                    nvinfer1::ICudaEngine *&engine)
+                    nvinfer1::ICudaEngine *&engine, const int &BATCH_SIZE)
 {
     // create the builder
     nvinfer1::IBuilder *builder = nvinfer1::createInferBuilder(gLogger.getTRTLogger());
@@ -77,7 +77,7 @@ void onnxToTrtModel(const std::string &modelfile,
 
 }
 
-bool readTrtFile(const std::string &engineFile,nvinfer1::ICudaEngine *&engine)
+bool YOLOv5::v5readTrtFile(const std::string &engineFile,nvinfer1::ICudaEngine *&engine)
 {
     std::string cached_engine;
     std::fstream file;
@@ -104,95 +104,23 @@ bool readTrtFile(const std::string &engineFile,nvinfer1::ICudaEngine *&engine)
     return true;
 }
 
-struct DetectRes{
-        int classes;
-        float x;
-        float y;
-        float w;
-        float h;
-        float prob;
-    };
 
-__device__ float Logist(float data) { return 1.0f / (1.0f + expf(-data)); };
-
-float IOUCalculate(const DetectRes &det_a, const DetectRes &det_b) {
-    cv::Point2f center_a(det_a.x, det_a.y);
-    cv::Point2f center_b(det_b.x, det_b.y);
-    cv::Point2f left_up(std::min(det_a.x - det_a.w / 2, det_b.x - det_b.w / 2),
-                        std::min(det_a.y - det_a.h / 2, det_b.y - det_b.h / 2));
-    cv::Point2f right_down(std::max(det_a.x + det_a.w / 2, det_b.x + det_b.w / 2),
-                           std::max(det_a.y + det_a.h / 2, det_b.y + det_b.h / 2));
-    float distance_d = (center_a - center_b).x * (center_a - center_b).x + (center_a - center_b).y * (center_a - center_b).y;
-    float distance_c = (left_up - right_down).x * (left_up - right_down).x + (left_up - right_down).y * (left_up - right_down).y;
-    float inter_l = det_a.x - det_a.w / 2 > det_b.x - det_b.w / 2 ? det_a.x - det_a.w / 2 : det_b.x - det_b.w / 2;
-    float inter_t = det_a.y - det_a.h / 2 > det_b.y - det_b.h / 2 ? det_a.y - det_a.h / 2 : det_b.y - det_b.h / 2;
-    float inter_r = det_a.x + det_a.w / 2 < det_b.x + det_b.w / 2 ? det_a.x + det_a.w / 2 : det_b.x + det_b.w / 2;
-    float inter_b = det_a.y + det_a.h / 2 < det_b.y + det_b.h / 2 ? det_a.y + det_a.h / 2 : det_b.y + det_b.h / 2;
-    if (inter_b < inter_t || inter_r < inter_l)
-        return 0;
-    float inter_area = (inter_b - inter_t) * (inter_r - inter_l);
-    float union_area = det_a.w * det_a.h + det_b.w * det_b.h - inter_area;
-    if (union_area == 0)
-        return 0;
-    else
-        return inter_area / union_area - distance_d / distance_c;
-}
-
-void NmsDetect(std::vector<DetectRes> &detections) {
-    sort(detections.begin(), detections.end(), [=](const DetectRes &left, const DetectRes &right) {
-        return left.prob > right.prob;
-    });
-
-    for (int i = 0; i < (int)detections.size(); i++)
-        for (int j = i + 1; j < (int)detections.size(); j++)
-        {
-            if (detections[i].classes == detections[j].classes)
-            {
-                float iou = IOUCalculate(detections[i], detections[j]);
-                if (iou > 0.5)
-                    detections[j].prob = 0;
-            }
-        }
-
-    detections.erase(std::remove_if(detections.begin(), detections.end(), [](const DetectRes &det)
-    { return det.prob == 0; }), detections.end());
-}
-
-
-int main()
-{
-    std::string config_file = "../yolov5/config.yaml";
-    YOLOv5 YOLOv5(config_file);
-    YOLOv5.v5loadEngine();
-    YOLOv5.inferenceImage();
-}
-
-int main123()
-{
-    std::string onnxPath = "../yolov5_tensorrt/model/yolov5s.onnx";
-    std::string save_path="../yolov5_tensorrt/model/yolov5s.serialized";
-    nvinfer1::ICudaEngine *engine = nullptr;
-
+void YOLOv5::v5loadEngine(){
     std::fstream existEngine;
     existEngine.open(save_path,std::ios::in);
     if(existEngine)
     {
-        readTrtFile(save_path,engine);
+        v5readTrtFile(save_path,engine);
         assert(engine != nullptr);
     }
     else
     {
-        onnxToTrtModel(onnxPath,save_path,engine);
+        v5onnxToTrtModel(onnxPath,save_path,engine,v5BATCH_SIZE);
         assert(engine != nullptr);
     }
+}
 
-
-
-    nvinfer1::IExecutionContext *context = engine->createExecutionContext();
-    assert(context != nullptr);
-
-    std::cout<< "Preparing data..." << std::endl;
-    cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
+std::vector<float> YOLOv5::v5prepareImage(cv::Mat &image){
     auto dims = engine->getBindingDimensions(0);
     std::vector<int> inputSize={dims.d[2],dims.d[3]};
     cv::resize(image, image, cv::Size(inputSize[1], inputSize[0]));
@@ -210,7 +138,6 @@ int main123()
         img.assign((float*)pixels.datastart,(float*)pixels.dataend);
     else{
         std::cout<<"Error reading image"<<std::endl;
-        return -1;
     }
 
 //    std::vector<float> mean {0.485, 0.456, 0.406};
@@ -222,6 +149,14 @@ int main123()
             data[c * hw + j] = img[channels * j + 2 - c];
         }
     }
+    return data;
+    
+}
+
+void YOLOv5::inferenceImage()
+{
+    cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
+    std::vector<float> data=v5prepareImage(image);
 
     //get buffers
     assert(engine->getNbBindings() == 4);
@@ -246,17 +181,19 @@ int main123()
     std::cout << "host2device" << std::endl;
     cudaMemcpyAsync(buffers_new[0], data.data(), bufferSize[0], cudaMemcpyHostToDevice, stream);
 
-    std::cout << "execute" << std::endl;
-    context->execute(BATCH_SIZE,buffers_new);
-//    context->enqueue(1,buffers_new,stream,nullptr);
-    int outSize1 = bufferSize[1] / sizeof(float) / BATCH_SIZE;
-    auto *out1 = new float[outSize1 * BATCH_SIZE];
+    nvinfer1::IExecutionContext *context = engine->createExecutionContext();
+    assert(context != nullptr);
+
+    context->execute(v5BATCH_SIZE,buffers_new);
+
+    int outSize1 = bufferSize[1] / sizeof(float) / v5BATCH_SIZE;
+    auto *out1 = new float[outSize1 * v5BATCH_SIZE];
     cudaMemcpyAsync(out1, buffers_new[1], bufferSize[1], cudaMemcpyDeviceToHost, stream);
-    int outSize2 = bufferSize[2] / sizeof(float) / BATCH_SIZE;
-    auto *out2 = new float[outSize2 * BATCH_SIZE];
+    int outSize2 = bufferSize[2] / sizeof(float) / v5BATCH_SIZE;
+    auto *out2 = new float[outSize2 * v5BATCH_SIZE];
     cudaMemcpyAsync(out2, buffers_new[2], bufferSize[2], cudaMemcpyDeviceToHost, stream);
-    int outSize3 = bufferSize[3] / sizeof(float) / BATCH_SIZE;
-    auto *out3 = new float[outSize3 * BATCH_SIZE];
+    int outSize3 = bufferSize[3] / sizeof(float) / v5BATCH_SIZE;
+    auto *out3 = new float[outSize3 * v5BATCH_SIZE];
     cudaMemcpyAsync(out3, buffers_new[3], bufferSize[3], cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
 
@@ -264,6 +201,8 @@ int main123()
     std::vector<float *> output={out1,out2,out3};
     
     int ratio=1;
+    int IMAGE_WIDTH=640;
+    int IMAGE_HEIGHT=640;
     std::vector<int> stride = std::vector<int> {8, 16, 32};
     std::vector<std::vector<int>> grids = {
                 {3, int(IMAGE_WIDTH / stride[0]), int(IMAGE_HEIGHT / stride[0])},
@@ -315,13 +254,48 @@ int main123()
     }
 
     cv::imwrite("../yolov5_tensorrt/images/render.jpg", image);
+}
 
 
+float YOLOv5::IOUCalculate(const DetectRes &det_a, const DetectRes &det_b) {
+    cv::Point2f center_a(det_a.x, det_a.y);
+    cv::Point2f center_b(det_b.x, det_b.y);
+    cv::Point2f left_up(std::min(det_a.x - det_a.w / 2, det_b.x - det_b.w / 2),
+                        std::min(det_a.y - det_a.h / 2, det_b.y - det_b.h / 2));
+    cv::Point2f right_down(std::max(det_a.x + det_a.w / 2, det_b.x + det_b.w / 2),
+                           std::max(det_a.y + det_a.h / 2, det_b.y + det_b.h / 2));
+    float distance_d = (center_a - center_b).x * (center_a - center_b).x + (center_a - center_b).y * (center_a - center_b).y;
+    float distance_c = (left_up - right_down).x * (left_up - right_down).x + (left_up - right_down).y * (left_up - right_down).y;
+    float inter_l = det_a.x - det_a.w / 2 > det_b.x - det_b.w / 2 ? det_a.x - det_a.w / 2 : det_b.x - det_b.w / 2;
+    float inter_t = det_a.y - det_a.h / 2 > det_b.y - det_b.h / 2 ? det_a.y - det_a.h / 2 : det_b.y - det_b.h / 2;
+    float inter_r = det_a.x + det_a.w / 2 < det_b.x + det_b.w / 2 ? det_a.x + det_a.w / 2 : det_b.x + det_b.w / 2;
+    float inter_b = det_a.y + det_a.h / 2 < det_b.y + det_b.h / 2 ? det_a.y + det_a.h / 2 : det_b.y + det_b.h / 2;
+    if (inter_b < inter_t || inter_r < inter_l)
+        return 0;
+    float inter_area = (inter_b - inter_t) * (inter_r - inter_l);
+    float union_area = det_a.w * det_a.h + det_b.w * det_b.h - inter_area;
+    if (union_area == 0)
+        return 0;
+    else
+        return inter_area / union_area - distance_d / distance_c;
+}
 
+void YOLOv5::NmsDetect(std::vector<DetectRes> &detections) {
+    sort(detections.begin(), detections.end(), [=](const DetectRes &left, const DetectRes &right) {
+        return left.prob > right.prob;
+    });
 
+    for (int i = 0; i < (int)detections.size(); i++)
+        for (int j = i + 1; j < (int)detections.size(); j++)
+        {
+            if (detections[i].classes == detections[j].classes)
+            {
+                float iou = IOUCalculate(detections[i], detections[j]);
+                if (iou > 0.5)
+                    detections[j].prob = 0;
+            }
+        }
 
-
-    
-
-
+    detections.erase(std::remove_if(detections.begin(), detections.end(), [](const DetectRes &det)
+    { return det.prob == 0; }), detections.end());
 }

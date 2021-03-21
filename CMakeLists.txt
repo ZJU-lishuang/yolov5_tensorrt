@@ -3,10 +3,6 @@ cmake_minimum_required(VERSION 3.5)
 #项目名
 project(yolov5tensorrt)
 
-# output 设置生成可执行文件保存位置
-# set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin")
-# message(STATUS "Project_binary_dir : ${PROJECT_BINARY_DIR}")
-
 #自定义opencv路径
 # set(OpenCV_DIR /home/ls/softwares/opencv-4.5.1/build)
 # find opencv
@@ -15,7 +11,6 @@ include_directories( ${OpenCV_INCLUDE_DIRS})
 
 message(STATUS "Find OpenCV include at ${OpenCV_INCLUDE_DIRS}")
 message(STATUS "Find OpenCV libraries: ${OpenCV_LIBRARIES}")
-
 
 if(NOT OpenCV_FOUND)
     message(ERROR "OpenCV not found!")
@@ -43,11 +38,17 @@ set(project_dir /home/ls/projects/yolov5_tensorrt)
 include_directories(${project_dir}/include)
 #链接库目录
 link_directories(${project_dir}/lib)
-
-
-# AUX_SOURCE_DIRECTORY(. SRC_LIST)
 #设置生成库保存位置
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${project_dir}/lib)
+
+## Output
+#set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin")
+#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+## Project
+#include_directories(${PROJECT_SOURCE_DIR}/include)
+#link_directories(${PROJECT_SOURCE_DIR}/src)
+#link_directories(${PROJECT_SOURCE_DIR}/lib)
+
 # Loggers
 set(tensorrtlib  src/logger.cpp)
 set(YOLO5 ${tensorrtlib} src/yolov5.cpp)
@@ -57,10 +58,8 @@ set(TRT_LIB libnvinfer.so libnvonnxparser.so cudart.so)
 #生成动态库文件so
 cuda_add_library(yolo5trt SHARED ${YOLO5})
 
-# ADD_EXECUTABLE(yolov5tensorrt ${SRC_LIST})
 ADD_EXECUTABLE(yolov5tensorrt main.cpp)
-
-target_link_libraries( yolov5tensorrt yolo5trt.so ${TRT_LIB} ${OpenCV_LIBS} ${CUDA_LIBRARIES} )
+target_link_libraries( yolov5tensorrt yolo5trt.so ${TRT_LIB} ${OpenCV_LIBS} ${CUDA_LIBRARIES})
 
 
 

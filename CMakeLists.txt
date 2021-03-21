@@ -32,34 +32,17 @@ include_directories(${CUDA_INCLUDE_DIRS})
 message(STATUS "TensorRT Header => ${tensorrt_dir}/include")
 message(STATUS "TensorRT Lib => ${tensorrt_dir}/lib")
 
-#本地头文件
-set(project_dir /home/ls/projects/yolov5_tensorrt)
-#链接头文件目录
-include_directories(${project_dir}/include)
-#链接库目录
-link_directories(${project_dir}/lib)
-#设置生成库保存位置
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${project_dir}/lib)
-
-## Output
-#set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin")
-#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-## Project
-#include_directories(${PROJECT_SOURCE_DIR}/include)
-#link_directories(${PROJECT_SOURCE_DIR}/src)
-#link_directories(${PROJECT_SOURCE_DIR}/lib)
-
-# Loggers
-set(tensorrtlib  src/logger.cpp)
-set(YOLO5 ${tensorrtlib} src/yolov5.cpp)
-
 set(TRT_LIB libnvinfer.so libnvonnxparser.so cudart.so)
 
-#生成动态库文件so
-cuda_add_library(yolo5trt SHARED ${YOLO5})
+add_subdirectory(${CMAKE_SOURCE_DIR}/module)
+include_directories(${CMAKE_SOURCE_DIR}/module/include)
+# 链接库目录
+link_directories(${CMAKE_SOURCE_DIR}/lib)
+# 链接依赖库
+link_libraries(module)
 
-ADD_EXECUTABLE(yolov5tensorrt main.cpp)
-target_link_libraries( yolov5tensorrt yolo5trt.so ${TRT_LIB} ${OpenCV_LIBS} ${CUDA_LIBRARIES})
+ADD_EXECUTABLE(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} ${TRT_LIB} ${OpenCV_LIBS} ${CUDA_LIBRARIES})
 
 
 

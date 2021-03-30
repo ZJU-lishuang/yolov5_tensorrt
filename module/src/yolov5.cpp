@@ -27,16 +27,21 @@ inline unsigned int getElementSize(nvinfer1::DataType t)
 
 
 
-YOLOv5::YOLOv5(std::string config_file){
-    onnxPath = "../yolov5_tensorrt/model/yolov5s.onnx";
-    save_path="../yolov5_tensorrt/model/yolov5s.serialized";
-    v5BATCH_SIZE=1;
+YOLOv5::YOLOv5(common::params inputparams){
+    onnxPath = inputparams.onnxPath;
+    save_path=inputparams.save_path;
+    BATCH_SIZE=inputparams.BATCH_SIZE;
+    IMAGE_WIDTH=inputparams.IMAGE_WIDTH;
+    IMAGE_HEIGHT=inputparams.IMAGE_HEIGHT;
 
 }
 
-YOLOv5::~YOLOv5() = default;
+YOLOv5::~YOLOv5(){
+    if (context) context->destroy();
+    if (engine) engine->destroy();
+}
 
-void YOLOv5::v5onnxToTrtModel(const std::string &modelfile,
+void YOLOv5::onnxToTrtModel(const std::string &modelfile,
                     const std::string &filename,
                     nvinfer1::ICudaEngine *&engine, const int &BATCH_SIZE)
 {
@@ -77,7 +82,7 @@ void YOLOv5::v5onnxToTrtModel(const std::string &modelfile,
 
 }
 
-bool YOLOv5::v5readTrtFile(const std::string &engineFile,nvinfer1::ICudaEngine *&engine)
+bool YOLOv5::readTrtFile(const std::string &engineFile,nvinfer1::ICudaEngine *&engine)
 {
     std::string cached_engine;
     std::fstream file;
@@ -110,12 +115,12 @@ void YOLOv5::v5loadEngine(){
     existEngine.open(save_path,std::ios::in);
     if(existEngine)
     {
-        v5readTrtFile(save_path,engine);
+        readTrtFile(save_path,engine);
         assert(engine != nullptr);
     }
     else
     {
-        v5onnxToTrtModel(onnxPath,save_path,engine,v5BATCH_SIZE);
+        onnxToTrtModel(onnxPath,save_path,engine,BATCH_SIZE);
         assert(engine != nullptr);
     }
 }
@@ -124,9 +129,6 @@ std::vector<float> YOLOv5::v5prepareImage(cv::Mat &image){
     auto dims = engine->getBindingDimensions(0);
     std::vector<int> inputSize={dims.d[2],dims.d[3]};
     cv::resize(image, image, cv::Size(inputSize[1], inputSize[0]));
-    std::cout<<float(image.at<cv::Vec3b>(0, 0)[0])<<std::endl;
-    std::cout<<float(image.at<cv::Vec3b>(0, 0)[1])<<std::endl;
-    std::cout<<float(image.at<cv::Vec3b>(0, 0)[2])<<std::endl;
     cv::Mat pixels;
     image.convertTo(pixels,CV_32FC3,1.0/255,0);
 
@@ -153,9 +155,9 @@ std::vector<float> YOLOv5::v5prepareImage(cv::Mat &image){
     
 }
 
-void YOLOv5::inferenceImage()
+void YOLOv5::inferenceImage(cv::Mat image)
 {
-    cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
+    // cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
     std::vector<float> data=v5prepareImage(image);
 
     //get buffers
@@ -181,19 +183,19 @@ void YOLOv5::inferenceImage()
     std::cout << "host2device" << std::endl;
     cudaMemcpyAsync(buffers_new[0], data.data(), bufferSize[0], cudaMemcpyHostToDevice, stream);
 
-    nvinfer1::IExecutionContext *context = engine->createExecutionContext();
+    context = engine->createExecutionContext();
     assert(context != nullptr);
 
-    context->execute(v5BATCH_SIZE,buffers_new);
+    context->execute(BATCH_SIZE,buffers_new);
 
-    int outSize1 = bufferSize[1] / sizeof(float) / v5BATCH_SIZE;
-    auto *out1 = new float[outSize1 * v5BATCH_SIZE];
+    int outSize1 = bufferSize[1] / sizeof(float) / BATCH_SIZE;
+    auto *out1 = new float[outSize1 * BATCH_SIZE];
     cudaMemcpyAsync(out1, buffers_new[1], bufferSize[1], cudaMemcpyDeviceToHost, stream);
-    int outSize2 = bufferSize[2] / sizeof(float) / v5BATCH_SIZE;
-    auto *out2 = new float[outSize2 * v5BATCH_SIZE];
+    int outSize2 = bufferSize[2] / sizeof(float) / BATCH_SIZE;
+    auto *out2 = new float[outSize2 * BATCH_SIZE];
     cudaMemcpyAsync(out2, buffers_new[2], bufferSize[2], cudaMemcpyDeviceToHost, stream);
-    int outSize3 = bufferSize[3] / sizeof(float) / v5BATCH_SIZE;
-    auto *out3 = new float[outSize3 * v5BATCH_SIZE];
+    int outSize3 = bufferSize[3] / sizeof(float) / BATCH_SIZE;
+    auto *out3 = new float[outSize3 * BATCH_SIZE];
     cudaMemcpyAsync(out3, buffers_new[3], bufferSize[3], cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
 
@@ -201,8 +203,6 @@ void YOLOv5::inferenceImage()
     std::vector<float *> output={out1,out2,out3};
     
     int ratio=1;
-    int IMAGE_WIDTH=640;
-    int IMAGE_HEIGHT=640;
     std::vector<int> stride = std::vector<int> {8, 16, 32};
     std::vector<std::vector<int>> grids = {
                 {3, int(IMAGE_WIDTH / stride[0]), int(IMAGE_HEIGHT / stride[0])},
@@ -243,6 +243,8 @@ void YOLOv5::inferenceImage()
 
     }
     NmsDetect(result);
+
+    //show result in image
     for (auto it: result){
         float score = it.prob;
         int xmin=it.x-it.w/2;

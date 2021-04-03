@@ -49,6 +49,7 @@ private:
                     nvinfer1::ICudaEngine *&engine, const int &BATCH_SIZE);
     bool readTrtFile(const std::string &engineFile,nvinfer1::ICudaEngine *&engine);
     std::vector<float> v5prepareImage(cv::Mat &image);
+    std::vector<float> prepareImage(cv::Mat &image);
     float IOUCalculate(const DetectRes &det_a, const DetectRes &det_b);
     void NmsDetect(std::vector<DetectRes> &detections);
 };

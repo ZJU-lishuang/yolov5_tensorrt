@@ -155,10 +155,37 @@ std::vector<float> YOLOv5::v5prepareImage(cv::Mat &image){
     
 }
 
+std::vector<float> YOLOv5::prepareImage(cv::Mat &image){
+    auto dims = engine->getBindingDimensions(0);
+    std::vector<int> inputSize={dims.d[2],dims.d[3]};
+    int input_w=inputSize[1];
+    int input_h=inputSize[0];
+    float ratio = 1.0*input_w/image.cols<1.0*input_h/image.rows ? 1.0*input_w/image.cols : 1.0*input_h/image.rows;
+    cv::Mat flt_img = cv::Mat::zeros(cv::Size(input_w, input_h), CV_8UC3);
+    cv::Mat rsz_img;
+    cv::resize(image, rsz_img, cv::Size(), ratio, ratio);
+    rsz_img.copyTo(flt_img(cv::Rect(0, 0, rsz_img.cols, rsz_img.rows)));
+    flt_img.convertTo(flt_img, CV_32FC3, 1.0 / 255);
+
+    int channels=3;
+    int channelLength=input_w* input_h;
+    std::vector<float> result(channels* input_h * input_w);
+    float *data=result.data();
+
+    std::vector<cv::Mat> split_img={
+        cv::Mat(input_h,input_w,CV_32FC1,data+channelLength*2),
+        cv::Mat(input_h,input_w,CV_32FC1,data+channelLength*1),
+        cv::Mat(input_h,input_w,CV_32FC1,data+channelLength*0)
+    };
+    cv::split(flt_img, split_img);
+
+    return result;
+    
+}
+
 void YOLOv5::inferenceImage(cv::Mat image)
 {
-    // cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
-    std::vector<float> data=v5prepareImage(image);
+    std::vector<float> data=prepareImage(image);
 
     //get buffers
     assert(engine->getNbBindings() == 4);
@@ -202,7 +229,7 @@ void YOLOv5::inferenceImage(cv::Mat image)
     std::vector<DetectRes> result;
     std::vector<float *> output={out1,out2,out3};
     
-    int ratio=1;
+    float ratio = float(image.cols) / float(IMAGE_WIDTH) > float(image.rows) / float(IMAGE_HEIGHT)  ? float(image.cols) / float(IMAGE_WIDTH) : float(image.rows) / float(IMAGE_HEIGHT);
     std::vector<int> stride = std::vector<int> {8, 16, 32};
     std::vector<std::vector<int>> grids = {
                 {3, int(IMAGE_WIDTH / stride[0]), int(IMAGE_HEIGHT / stride[0])},
@@ -212,8 +239,6 @@ void YOLOv5::inferenceImage(cv::Mat image)
     std::vector<std::vector<int>> anchors={{10,13}, {16,30}, {33,23}, {30,61}, {62,45}, {59,119}, {116,90}, {156,198}, {373,326}};
     for(int n=0;n<(int)grids.size();n++)
     {
-//        if (n>0)
-//            break;
         int position=0;
         for(int c=0;c<grids[n][0];c++)
         {
@@ -232,8 +257,6 @@ void YOLOv5::inferenceImage(cv::Mat image)
                     box.classes=max_pos-row-5;
                     box.x = (Logist(row[0]) * 2 - 0.5 + w) / grids[n][1] * IMAGE_WIDTH * ratio;
                     box.y = (Logist(row[1]) * 2 - 0.5 + h) / grids[n][2] * IMAGE_HEIGHT * ratio;
-//                    std::cout<< pow(Logist(row[2]) * 2.f, 2)<<std::endl;
-//                    std::cout<< anchor[0]<<std::endl;
                     box.w = pow(Logist(row[2]) * 2.f, 2) * anchor[0] * ratio;
                     box.h = pow(Logist(row[3]) * 2.f, 2) * anchor[1] * ratio;
                     result.push_back(box);

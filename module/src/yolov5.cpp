@@ -126,40 +126,50 @@ void YOLOv5::v5loadEngine(){
 }
 
 std::vector<float> YOLOv5::v5prepareImage(cv::Mat &image){
-    auto dims = engine->getBindingDimensions(0);
-    std::vector<int> inputSize={dims.d[2],dims.d[3]};
-    cv::resize(image, image, cv::Size(inputSize[1], inputSize[0]));
-    cv::Mat pixels;
-    image.convertTo(pixels,CV_32FC3,1.0/255,0);
 
+    int w, h, x, y;
+    int input_w=IMAGE_WIDTH;
+    int input_h=IMAGE_HEIGHT;
+    float r_w = input_w / (image.cols*1.0);
+    float r_h = input_h / (image.rows*1.0);
+    if (r_h > r_w) {
+        w = input_w;
+        h = r_w * image.rows;
+        x = 0;
+        y = (input_h - h) / 2;
+    } else {
+        w = r_h * image.cols;
+        h = input_h;
+        x = (input_w - w) / 2;
+        y = 0;
+    }
+    cv::Mat re(h, w, CV_8UC3);
+    cv::resize(image, re, re.size(), 0, 0, cv::INTER_LINEAR);
+    cv::Mat out(input_h, input_w, CV_8UC3, cv::Scalar(128, 128, 128));
+    re.copyTo(out(cv::Rect(x, y, re.cols, re.rows)));
+    out.convertTo(out, CV_32FC3, 1.0 / 255);
     int channels=3;
     std::vector<float> img;
-    std::vector<float> data(channels* inputSize[0] * inputSize[1]);
+    std::vector<float> data(channels* input_h * input_w);
 
-    if(pixels.isContinuous())
-        img.assign((float*)pixels.datastart,(float*)pixels.dataend);
-    else{
-        std::cout<<"Error reading image"<<std::endl;
-    }
+    if (out.isContinuous())
+            img.assign((float*)out.datastart, (float*)out.dataend);
 
-//    std::vector<float> mean {0.485, 0.456, 0.406};
-//    std::vector<float> std {0.229, 0.224, 0.225};
-    //HWC TO CHW BGR=>RGB
     for (int c = 0; c < channels; c++) {
-        for (int j = 0, hw = inputSize[0] * inputSize[1]; j < hw; j++) {
-//            data[c * hw + j] = (img[channels * j + 2 - c] - mean[c]) / std[c];
+        for (int j = 0, hw = input_h * input_w; j < hw; j++) {
             data[c * hw + j] = img[channels * j + 2 - c];
         }
     }
     return data;
-    
 }
 
 std::vector<float> YOLOv5::prepareImage(cv::Mat &image){
-    auto dims = engine->getBindingDimensions(0);
-    std::vector<int> inputSize={dims.d[2],dims.d[3]};
-    int input_w=inputSize[1];
-    int input_h=inputSize[0];
+//    auto dims = engine->getBindingDimensions(0);
+//    std::vector<int> inputSize={dims.d[2],dims.d[3]};
+//    int input_w=inputSize[1];
+//    int input_h=inputSize[0];
+    int input_w=IMAGE_WIDTH;
+    int input_h=IMAGE_HEIGHT;
     float ratio = 1.0*input_w/image.cols<1.0*input_h/image.rows ? 1.0*input_w/image.cols : 1.0*input_h/image.rows;
     cv::Mat flt_img = cv::Mat::zeros(cv::Size(input_w, input_h), CV_8UC3);
     cv::Mat rsz_img;
@@ -180,12 +190,11 @@ std::vector<float> YOLOv5::prepareImage(cv::Mat &image){
     cv::split(flt_img, split_img);
 
     return result;
-    
 }
 
 void YOLOv5::inferenceImage(cv::Mat image)
 {
-    std::vector<float> data=prepareImage(image);
+    std::vector<float> data=v5prepareImage(image);
 
     //get buffers
     assert(engine->getNbBindings() == 4);
@@ -267,13 +276,31 @@ void YOLOv5::inferenceImage(cv::Mat image)
     }
     NmsDetect(result);
 
+    //v5prepareImage for x,y
+    int w, h, x=0, y=0;
+    int input_w=IMAGE_WIDTH;
+    int input_h=IMAGE_HEIGHT;
+    float r_w = input_w / (image.cols*1.0);
+    float r_h = input_h / (image.rows*1.0);
+    if (r_h > r_w) {
+        w = input_w;
+        h = r_w * image.rows;
+        x = 0;
+        y = (input_h - h) / 2;
+    } else {
+        w = r_h * image.cols;
+        h = input_h;
+        x = (input_w - w) / 2;
+        y = 0;
+    }
+
     //show result in image
     for (auto it: result){
         float score = it.prob;
-        int xmin=it.x-it.w/2;
-        int xmax=it.x+it.w/2;
-        int ymin=it.y-it.h/2;
-        int ymax=it.y+it.h/2;
+        int xmin=it.x-it.w/2-x;
+        int xmax=it.x+it.w/2-x;
+        int ymin=it.y-it.h/2-y;
+        int ymax=it.y+it.h/2-y;
         cv::rectangle(image, cv::Point(xmin, ymin), cv::Point(xmax, ymax), cv::Scalar(255, 204,0), 3);
         cv::putText(image, std::to_string(score), cv::Point(xmin, ymin), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,204,255));
     }

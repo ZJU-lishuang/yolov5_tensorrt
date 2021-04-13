@@ -36,6 +36,8 @@ public:
     void v5loadEngine();
     //inference image
     void inferenceImage(cv::Mat image);
+    // Get (h, w) size of the fixed input
+    std::vector<int> getInputSize();
 private:
     int BATCH_SIZE;
     int IMAGE_HEIGHT;

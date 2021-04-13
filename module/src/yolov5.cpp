@@ -163,6 +163,12 @@ std::vector<float> YOLOv5::v5prepareImage(cv::Mat &image){
     return data;
 }
 
+
+std::vector<int> YOLOv5::getInputSize() {
+    auto dims = engine->getBindingDimensions(0);
+    return {dims.d[2], dims.d[3]};
+}
+
 std::vector<float> YOLOv5::prepareImage(cv::Mat &image){
 //    auto dims = engine->getBindingDimensions(0);
 //    std::vector<int> inputSize={dims.d[2],dims.d[3]};
@@ -293,7 +299,8 @@ void YOLOv5::inferenceImage(cv::Mat image)
         x = (input_w - w) / 2;
         y = 0;
     }
-
+    cv::Mat re(h, w, CV_8UC3);
+    cv::resize(image, re, re.size(), 0, 0, cv::INTER_LINEAR);
     //show result in image
     for (auto it: result){
         float score = it.prob;
@@ -301,11 +308,11 @@ void YOLOv5::inferenceImage(cv::Mat image)
         int xmax=it.x+it.w/2-x;
         int ymin=it.y-it.h/2-y;
         int ymax=it.y+it.h/2-y;
-        cv::rectangle(image, cv::Point(xmin, ymin), cv::Point(xmax, ymax), cv::Scalar(255, 204,0), 3);
-        cv::putText(image, std::to_string(score), cv::Point(xmin, ymin), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,204,255));
+        cv::rectangle(re, cv::Point(xmin, ymin), cv::Point(xmax, ymax), cv::Scalar(255, 204,0), 3);
+        cv::putText(re, std::to_string(score), cv::Point(xmin, ymin), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,204,255));
     }
 
-    cv::imwrite("../yolov5_tensorrt/images/render.jpg", image);
+    cv::imwrite("../yolov5_tensorrt/images/render.jpg", re);
 }
 
 

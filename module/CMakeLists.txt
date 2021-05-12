@@ -8,8 +8,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 # 指定源文件目录
 file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
-
- 
 # 打印cmake当前目录地址&源文件目录地址
 message(module_CMAKE_CURRENT_SOURCE_DIR => ${CMAKE_CURRENT_SOURCE_DIR})
 message( module_SOURCE_FILES => ${SOURCE_FILES})

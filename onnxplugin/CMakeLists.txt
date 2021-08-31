@@ -28,10 +28,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 # SHARED ->生成动态库
 # STATIC ->生成静态库
 message(module_PROJECT_NAME => ${PROJECT_NAME})
-# add_library(${PROJECT_NAME} SHARED ${ALL_SRCS})
-# cuda_add_library(myplugins SHARED ${SiLU})
 cuda_add_library(${PROJECT_NAME} SHARED ${ALL_SRCS})
-
+# 链接相关cuda库
 find_library(CUDNN_LIB cudnn HINTS
     ${CUDA_TOOLKIT_ROOT_DIR} ${CUDNN_ROOT_DIR} PATH_SUFFIXES lib64 lib)
 find_library(CUBLAS_LIB cublas HINTS

@@ -42,7 +42,5 @@ target_link_libraries(${PROJECT_NAME}
     ${CUBLASLT_LIB}
     ${CUDART_LIB}
     ${CUDNN_LIB}
-    libnvinfer.so
-    libnvonnxparser.so
     ${CMAKE_DL_LIBS}
 )

@@ -6,8 +6,8 @@ project(yolov5tensorrt)
 #自定义opencv路径
 # set(OpenCV_DIR /home/ls/softwares/opencv-4.5.1/build)
 # find opencv
-find_package( OpenCV REQUIRED )
-include_directories( ${OpenCV_INCLUDE_DIRS})
+find_package(OpenCV REQUIRED )
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 message(STATUS "Find OpenCV include at ${OpenCV_INCLUDE_DIRS}")
 message(STATUS "Find OpenCV libraries: ${OpenCV_LIBRARIES}")
@@ -23,14 +23,15 @@ message(STATUS "CUDA_INCLUDE_DIRS => ${CUDA_INCLUDE_DIRS}")
 include_directories("/usr/local/cuda/include")
 link_directories("/usr/local/cuda/lib64" "/usr/lib" /usr/lib/x86_64-linux-gnu )
 #tensorrt
-set(TensorRT_DIR /home/ls/softwares/TensorRT)
+# set(TensorRT_DIR /home/ls/softwares/TensorRT)
+set(TensorRT_DIR /home/ls/softwares/TensorRT-7.2.3.4)
 if(DEFINED TensorRT_DIR)
   include_directories("${TensorRT_DIR}/include")
   link_directories("${TensorRT_DIR}/lib")
 endif(DEFINED TensorRT_DIR)
 include_directories(${CUDA_INCLUDE_DIRS})
-message(STATUS "TensorRT Header => ${tensorrt_dir}/include")
-message(STATUS "TensorRT Lib => ${tensorrt_dir}/lib")
+message(STATUS "TensorRT Header => ${TensorRT_DIR}/include")
+message(STATUS "TensorRT Lib => ${TensorRT_DIR}/lib")
 
 set(TRT_LIB libnvinfer.so libnvonnxparser.so cudart.so)
 # 链接子项目部件

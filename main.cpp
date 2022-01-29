@@ -8,8 +8,8 @@ void initParams(common::params &inputparams){
     inputparams.IMAGE_WIDTH=640;
     // inputparams.onnxPath="../yolov5_tensorrt/model/yolov5s.onnx";
     // inputparams.save_path="../yolov5_tensorrt/model/yolov5s.serialized";
-   inputparams.onnxPath="../yolov5_tensorrt/model/yolov5s_plugin.onnx";
-   inputparams.save_path="../yolov5_tensorrt/model/yolov5s_plugin.serialized";
+   inputparams.onnxPath="../model/yolov5s_plugin.onnx";
+   inputparams.save_path="../model/yolov5s_plugin.serialized";
 }
 
 int main()
@@ -23,6 +23,6 @@ int main()
     std::vector<int> inputSize=YOLOv5.getInputSize();
     assert(inputparams.IMAGE_HEIGHT==inputSize[0]);
     assert(inputparams.IMAGE_WIDTH==inputSize[1]);
-    cv::Mat image = cv::imread("../yolov5_tensorrt/images/coco_1.jpg");
+    cv::Mat image = cv::imread("../images/coco_1.jpg");
     YOLOv5.inferenceImage(image);
 }

@@ -1,3 +1,5 @@
 __pycache__
-weights
+*.pt
+*.onnx
+*.engine
 int8_tool

@@ -101,12 +101,10 @@ if __name__ == "__main__":
     img /= 255.0  # 0 - 255 to 0.0 - 1.0
     if len(img.shape) == 3:
         img = img[None]
-    # dummy_input = np.ones([1, 3, 640, 640], dtype=np.float32)
-    dummy_input = img
-    inputs[0].host = dummy_input.reshape(-1)
+    inputs[0].host = img.reshape(-1)
 
     # 如果是动态输入，需以下设置
-    # context.set_binding_shape(0, dummy_input.shape)
+    # context.set_binding_shape(0, img.shape)
     
     trt_outputs = inference(context, bindings=bindings, inputs=inputs, outputs=outputs, stream=stream)
     # 取得yolov5输出

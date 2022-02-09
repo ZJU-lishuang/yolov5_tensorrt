@@ -1,0 +1,1 @@
+python export.py --weights weights/yolov5s.pt --include engine --device 0

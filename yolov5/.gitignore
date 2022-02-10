@@ -2,4 +2,4 @@ __pycache__
 *.pt
 *.onnx
 *.engine
-int8_tool
+coco128/*

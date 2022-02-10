@@ -93,7 +93,7 @@ def export_engine(model, im, file, train, half, simplify, workspace=4, verbose=F
 
         builder = trt.Builder(logger)
         config = builder.create_builder_config()
-        config.max_workspace_size = workspace * 1 << 20
+        config.max_workspace_size = workspace * 1 << 28
 
         flag = (1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         network = builder.create_network(flag)
@@ -198,7 +198,7 @@ def parse_opt():
     parser.add_argument('--simplify', action='store_true', help='ONNX: simplify model')
     parser.add_argument('--opset', type=int, default=14, help='ONNX: opset version')
     parser.add_argument('--verbose', action='store_true', help='TensorRT: verbose log')
-    parser.add_argument('--workspace', type=int, default=4, help='TensorRT: workspace size (GB)')
+    parser.add_argument('--workspace', type=int, default=1, help='TensorRT: workspace size (GB)')
     parser.add_argument('--include', nargs='+',
                         default=['engine'],
                         help='available formats are (onnx, engine)')

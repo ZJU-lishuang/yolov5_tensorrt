@@ -1,3 +1,8 @@
+# encoding: utf-8
+"""
+@author:  lishuang
+@contact: qqlishuang@gmail.com
+"""
 from infer import check_img_size,letterbox,non_max_suppression,scale_coords
 import tensorrt as trt
 import pycuda.autoinit

@@ -19,12 +19,15 @@ def main():
 
     calib=None
     if int8_mode:
+        # image size
+        height = 640
+        width = 640
         test_set = "coco128/images/train2017"
         engine_file_path = "weights/yolov5s_int8.engine"
         # Now we create a calibrator and give it the location of our calibration data.
         # We also allow it to cache calibration data for faster engine building.
         calibration_cache = "weights/yolov5_calibration.cache"
-        calib = Yolov5EntropyCalibrator(test_set, cache_file=calibration_cache)
+        calib = Yolov5EntropyCalibrator(test_set, cache_file=calibration_cache,height=height,width=width)
 
     batch_size=1
     engine = build_engine(onnx_file_path, batch_size,fp16_mode=fp16_mode, int8_mode=int8_mode,calib=calib)

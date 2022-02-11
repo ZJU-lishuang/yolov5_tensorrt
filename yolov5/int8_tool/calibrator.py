@@ -98,7 +98,7 @@ class DataLoader:
         return self.length
 
 class Yolov5EntropyCalibrator(trt.IInt8EntropyCalibrator2):
-    def __init__(self, training_data, cache_file, batch_size=64):
+    def __init__(self, training_data, cache_file, height=640,width=640,batch_size=64):
         # Whenever you specify a custom constructor for a TensorRT class,
         # you MUST call the constructor of the parent explicitly.
         trt.IInt8EntropyCalibrator2.__init__(self)
@@ -106,8 +106,6 @@ class Yolov5EntropyCalibrator(trt.IInt8EntropyCalibrator2):
         self.cache_file = cache_file
 
         # Every time get_batch is called, the next batch of size batch_size will be copied to the device and returned.
-        height=640
-        width=640
         self.data = DataLoader(training_data,batch_size,height,width)
         self.batch_size = batch_size
         self.current_index = 0

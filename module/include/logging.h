@@ -81,11 +81,11 @@ public:
             // std::stringbuf::str() gets the string contents of the buffer
             // insert the buffer contents pre-appended by the appropriate prefix into the stream
             mOutput << mPrefix << str();
-            // set the buffer to empty
+        }
+        // set the buffer to empty
             str("");
             // flush the stream
             mOutput.flush();
-        }
     }
 
     void setShouldLog(bool shouldLog)
@@ -225,7 +225,7 @@ public:
     //! TODO Once all samples are updated to use this method to register the logger with TensorRT,
     //! we can eliminate the inheritance of Logger from ILogger
     //!
-    nvinfer1::ILogger& getTRTLogger()
+    nvinfer1::ILogger& getTRTLogger() noexcept
     {
         return *this;
     }
@@ -236,7 +236,7 @@ public:
     //! Note samples should not be calling this function directly; it will eventually go away once we eliminate the
     //! inheritance from nvinfer1::ILogger
     //!
-    void log(Severity severity, const char* msg) override
+    void log(Severity severity, const char* msg) noexcept override
     {
         LogStreamConsumer(mReportableSeverity, severity) << "[TRT] " << std::string(msg) << std::endl;
     }
@@ -305,8 +305,10 @@ public:
     //! \return a TestAtom that can be used in Logger::reportTest{Start,End}().
     static TestAtom defineTest(const std::string& name, int argc, char const* const* argv)
     {
+        // Append TensorRT version as info
+        const std::string vname = name + " [TensorRT v" + std::to_string(NV_TENSORRT_VERSION) + "]";
         auto cmdline = genCmdlineString(argc, argv);
-        return defineTest(name, cmdline);
+        return defineTest(vname, cmdline);
     }
 
     //!
@@ -425,7 +427,9 @@ private:
         for (int i = 0; i < argc; i++)
         {
             if (i > 0)
+            {
                 ss << " ";
+            }
             ss << argv[i];
         }
         return ss.str();
@@ -487,7 +491,7 @@ inline LogStreamConsumer LOG_ERROR(const Logger& logger)
 
 //!
 //! \brief produces a LogStreamConsumer object that can be used to log messages of severity kINTERNAL_ERROR
-//         ("fatal" severity)
+//！         ("fatal" severity)
 //!
 //! Example usage:
 //!

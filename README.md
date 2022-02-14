@@ -4,7 +4,7 @@
 ### environment
 - ubuntu20
 - cuda11.0
-- tensorrt7.2.3.4
+- tensorrt8.0.3.4
 - pytorch1.7.1
 
 ### C++

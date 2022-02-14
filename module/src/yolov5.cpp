@@ -312,7 +312,7 @@ void YOLOv5::inferenceImage(cv::Mat image)
         cv::putText(re, std::to_string(score), cv::Point(xmin, ymin), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,204,255));
     }
 
-    cv::imwrite("../yolov5_tensorrt/images/render.jpg", re);
+    cv::imwrite("../images/render.jpg", re);
 }
 
 

@@ -43,12 +43,12 @@ SILU::SILU(const void* buffer, size_t length)
 
 }
 
-int SILU::getNbOutputs() const
+int SILU::getNbOutputs() const TRT_NOEXCEPT 
 {
     return 1;
 }
 
-Dims SILU::getOutputDimensions(int index, const Dims* inputs, int nbInputDims)
+Dims SILU::getOutputDimensions(int index, const Dims* inputs, int nbInputDims) TRT_NOEXCEPT
 {
     ASSERT(nbInputDims == 1);
     ASSERT(index == 0);
@@ -71,7 +71,7 @@ pluginStatus_t SILU::SiLUInference_cpu(const int n, const float* input, float* o
 }
 
 
-int SILU::enqueue(int batchSize, const void* const* inputs, void** outputs, void* workspace, cudaStream_t stream)
+int SILU::enqueue(int batchSize, const void* const* inputs, void* TRT_CONST_ENQUEUE* outputs, void* workspace, cudaStream_t stream) TRT_NOEXCEPT
 {
     const void* inputData = inputs[0];
     void* outputData = outputs[0];
@@ -81,7 +81,7 @@ int SILU::enqueue(int batchSize, const void* const* inputs, void** outputs, void
     return status;
 }
 
-size_t SILU::getSerializationSize() const
+size_t SILU::getSerializationSize() const TRT_NOEXCEPT
 {
     // mNegSlope, mBatchDim
     // return sizeof(float) + sizeof(int);
@@ -90,35 +90,35 @@ size_t SILU::getSerializationSize() const
 }
 
 // Set plugin namespace
-void SILU::setPluginNamespace(const char* pluginNamespace)
+void SILU::setPluginNamespace(const char* pluginNamespace) TRT_NOEXCEPT
 {
     mPluginNamespace = pluginNamespace;
 }
 
-const char* SILU::getPluginNamespace() const
+const char* SILU::getPluginNamespace() const TRT_NOEXCEPT
 {
     return mPluginNamespace;
 }
 
 // Return the DataType of the plugin output at the requested index
-DataType SILU::getOutputDataType(int index, const nvinfer1::DataType* inputTypes, int nbInputs) const
+DataType SILU::getOutputDataType(int index, const nvinfer1::DataType* inputTypes, int nbInputs) const TRT_NOEXCEPT
 {
     return DataType::kFLOAT;
 }
 
 // Return true if output tensor is broadcast across a batch.
-bool SILU::isOutputBroadcastAcrossBatch(int outputIndex, const bool* inputIsBroadcasted, int nbInputs) const
+bool SILU::isOutputBroadcastAcrossBatch(int outputIndex, const bool* inputIsBroadcasted, int nbInputs) const TRT_NOEXCEPT
 {
     return false;
 }
 
 // Return true if plugin can use input that is broadcast across batch without replication.
-bool SILU::canBroadcastInputAcrossBatch(int inputIndex) const
+bool SILU::canBroadcastInputAcrossBatch(int inputIndex) const TRT_NOEXCEPT
 {
     return false;
 }
 
-void SILU::configurePlugin(const PluginTensorDesc* in, int nbInput, const PluginTensorDesc* out, int nbOutput)
+void SILU::configurePlugin(const PluginTensorDesc* in, int nbInput, const PluginTensorDesc* out, int nbOutput) TRT_NOEXCEPT
 {
     // ASSERT(mBatchDim == 1);
     // for (int i = 0; i <in->dims.nbDims; ++i)
@@ -127,14 +127,14 @@ void SILU::configurePlugin(const PluginTensorDesc* in, int nbInput, const Plugin
     // }
 }
 
-void SILU::attachToContext(cudnnContext* cudnnContext, cublasContext* cublasContext, IGpuAllocator* gpuAllocator)
+void SILU::attachToContext(cudnnContext* cudnnContext, cublasContext* cublasContext, IGpuAllocator* gpuAllocator) TRT_NOEXCEPT
 {
 }
 
 // Detach the plugin object from its execution context.
-void SILU::detachFromContext() {}
+void SILU::detachFromContext() TRT_NOEXCEPT {}
 
-void SILU::serialize(void* buffer) const
+void SILU::serialize(void* buffer) const TRT_NOEXCEPT
 {
     // char *d = reinterpret_cast<char*>(buffer), *a = d;
     // write(d, mBatchDim);
@@ -159,7 +159,7 @@ void SILU::serialize(void* buffer) const
 //     return (type == DataType::kFLOAT && format == PluginFormat::kNCHW);
 // }
 
-bool SILU::supportsFormatCombination(int pos, const PluginTensorDesc* inOut, int nbInputs, int nbOutputs) const
+bool SILU::supportsFormatCombination(int pos, const PluginTensorDesc* inOut, int nbInputs, int nbOutputs) const TRT_NOEXCEPT
 {
 //    ASSERT(mBatchDim == 1);
 //    for (int i = 0; i <inOut->dims.nbDims; ++i)
@@ -169,34 +169,34 @@ bool SILU::supportsFormatCombination(int pos, const PluginTensorDesc* inOut, int
     return inOut[pos].format == TensorFormat::kLINEAR && inOut[pos].type == DataType::kFLOAT;
 }
 
-int SILU::initialize()
+int SILU::initialize() TRT_NOEXCEPT
 {
     return 0;
 }
 
-void SILU::terminate() {}
+void SILU::terminate() TRT_NOEXCEPT {}
 
-size_t SILU::getWorkspaceSize(int maxBatchSize) const
+size_t SILU::getWorkspaceSize(int maxBatchSize) const TRT_NOEXCEPT
 {
     return 0;
 }
 
-const char* SILU::getPluginType() const
+const char* SILU::getPluginType() const TRT_NOEXCEPT
 {
     return SILU_PLUGIN_NAME;
 }
 
-const char* SILU::getPluginVersion() const
+const char* SILU::getPluginVersion() const TRT_NOEXCEPT
 {
     return SILU_PLUGIN_VERSION;
 }
 
-void SILU::destroy()
+void SILU::destroy() TRT_NOEXCEPT
 {
     delete this;
 }
 
-IPluginV2IOExt* SILU::clone() const
+IPluginV2IOExt* SILU::clone() const TRT_NOEXCEPT
 {
     SILU* plugin = new SILU();
     plugin->input_size_ = input_size_;
@@ -213,22 +213,22 @@ SiLUPluginCreator::SiLUPluginCreator()
     mFC.fields = mPluginAttributes.data();
 }
 
-const char* SiLUPluginCreator::getPluginName() const
+const char* SiLUPluginCreator::getPluginName() const TRT_NOEXCEPT
 {
     return SILU_PLUGIN_NAME;
 }
 
-const char* SiLUPluginCreator::getPluginVersion() const
+const char* SiLUPluginCreator::getPluginVersion() const TRT_NOEXCEPT
 {
     return SILU_PLUGIN_VERSION;
 }
 
-const PluginFieldCollection* SiLUPluginCreator::getFieldNames()
+const PluginFieldCollection* SiLUPluginCreator::getFieldNames() TRT_NOEXCEPT
 {
     return &mFC;
 }
 
-IPluginV2IOExt* SiLUPluginCreator::createPlugin(const char* name, const PluginFieldCollection* fc)
+IPluginV2IOExt* SiLUPluginCreator::createPlugin(const char* name, const PluginFieldCollection* fc) TRT_NOEXCEPT
 {
     // const PluginField* fields = fc->fields;
     // ASSERT(fc->nbFields == 1);
@@ -241,7 +241,7 @@ IPluginV2IOExt* SiLUPluginCreator::createPlugin(const char* name, const PluginFi
     return obj;
 }
 
-IPluginV2IOExt* SiLUPluginCreator::deserializePlugin(const char* name, const void* serialData, size_t serialLength)
+IPluginV2IOExt* SiLUPluginCreator::deserializePlugin(const char* name, const void* serialData, size_t serialLength) TRT_NOEXCEPT
 {
     // This object will be deleted when the network is destroyed, which will
     // call LReluPlugin::destroy()

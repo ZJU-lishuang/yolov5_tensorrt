@@ -45,12 +45,12 @@ namespace plugin
 class BasePlugin : public IPluginV2
 {
 protected:
-    void setPluginNamespace(const char* libNamespace) override
+    void setPluginNamespace(const char* libNamespace) TRT_NOEXCEPT override
     {
         mNamespace = libNamespace;
     }
 
-    const char* getPluginNamespace() const override
+    const char* getPluginNamespace() const TRT_NOEXCEPT override
     {
         return mNamespace.c_str();
     }
@@ -61,12 +61,12 @@ protected:
 class BaseCreator : public IPluginCreator
 {
 public:
-    void setPluginNamespace(const char* libNamespace) override
+    void setPluginNamespace(const char* libNamespace) TRT_NOEXCEPT override
     {
         mNamespace = libNamespace;
     }
 
-    const char* getPluginNamespace() const override
+    const char* getPluginNamespace() const TRT_NOEXCEPT override
     {
         return mNamespace.c_str();
     }

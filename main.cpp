@@ -14,8 +14,8 @@ void initParams(common::params &inputparams){
 
 int main()
 {
-//     auto creator = getPluginRegistry()->getPluginCreator("SiLU", "1");
-//     printf("success in getPluginCreator\n");
+    // auto creator = getPluginRegistry()->getPluginCreator("SiLU", "1");
+    // printf("success in getPluginCreator\n");
     common::params inputparams;
     initParams(inputparams);
     YOLOv5 YOLOv5(inputparams);

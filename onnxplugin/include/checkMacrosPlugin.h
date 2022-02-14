@@ -35,6 +35,13 @@
 #define OVERRIDE override
 #define NORETURN [[noreturn]]
 #endif
+#if NV_TENSORRT_MAJOR >= 8
+#define TRT_NOEXCEPT noexcept
+#define TRT_CONST_ENQUEUE const
+#else
+#define TRT_NOEXCEPT
+#define TRT_CONST_ENQUEUE
+#endif
 
 #endif // TRT_TUT_HELPERS_H
 #endif // TRT_CHECK_MACROS_H

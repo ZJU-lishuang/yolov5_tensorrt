@@ -2,10 +2,10 @@
 *yolov5 deployment*
 
 ### environment
-- ubuntu20
-- cuda11.0
-- tensorrt8.0.3.4
-- pytorch1.7.1
+- ubuntu 20.04
+- cuda 11.0
+- tensorrt 8.0.3.4
+- pytorch 1.7.1
 
 ### C++
 ```

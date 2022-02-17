@@ -73,6 +73,7 @@ if __name__ == "__main__":
     conf_thres = 0.466
     iou_thres = 0.6
     batch_size = 1
+    nc=80
     img0 = cv2.imread("../images/coco_1.jpg")
     weights = "weights/yolov5s.engine" 
 
@@ -115,7 +116,7 @@ if __name__ == "__main__":
     # 取得yolov5输出
     result_output = trt_outputs[3]
     # 由于tensorrt输出为一维向量，需要reshape到指定尺寸
-    output_shape = (batch_size, -1, 85)
+    output_shape = (batch_size, -1, nc+5)
     pred = postprocess_the_outputs(result_output, output_shape)
 
     pred = non_max_suppression(pred, conf_thres, iou_thres, classes=None,

@@ -1,6 +1,0 @@
-__pycache__
-*.pt
-*.onnx
-*.engine
-*.cache
-coco128/*

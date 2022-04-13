@@ -1,1 +1,0 @@
-python int8_tool/sample.py

@@ -2,11 +2,13 @@
 cmake_minimum_required(VERSION 3.5)  
 #项目名
 project(yolov5tensorrt)
+#可执行文件保存目录
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 #自定义opencv路径
-# set(OpenCV_DIR /home/ls/softwares/opencv-4.5.1/build)
+set(OpenCV_DIR /home/ls/softwares/opencv-4.5.5/build)
 # find opencv
-find_package(OpenCV REQUIRED )
+find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 message(STATUS "Find OpenCV include at ${OpenCV_INCLUDE_DIRS}")
@@ -23,9 +25,8 @@ message(STATUS "CUDA_INCLUDE_DIRS => ${CUDA_INCLUDE_DIRS}")
 include_directories("/usr/local/cuda/include")
 link_directories("/usr/local/cuda/lib64" "/usr/lib" /usr/lib/x86_64-linux-gnu )
 #tensorrt
+set(TensorRT_DIR /home/ls/softwares/TensorRT-8.2.3.0)
 # set(TensorRT_DIR /home/ls/softwares/TensorRT)
-# set(TensorRT_DIR /home/ls/softwares/TensorRT-7.2.3.4)
-set(TensorRT_DIR /home/ls/softwares/TensorRT-8.0.3.4)
 if(DEFINED TensorRT_DIR)
   include_directories("${TensorRT_DIR}/include")
   link_directories("${TensorRT_DIR}/lib")

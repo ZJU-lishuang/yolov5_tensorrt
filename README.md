@@ -3,9 +3,9 @@
 
 ### environment
 - ubuntu 20.04
-- cuda 11.0
-- tensorrt 8.0.3.4
-- pytorch 1.7.1
+- cuda 11.6.2
+- tensorrt 8.2.3.0
+- pytorch 1.10
 
 ### C++
 ```

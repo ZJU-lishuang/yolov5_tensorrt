@@ -25,7 +25,17 @@ inline unsigned int getElementSize(nvinfer1::DataType t)
     return 0;
 }
 
-
+template<typename _T>
+static std::string join_dims(const std::vector<_T>& dims){
+    std::stringstream output;
+    char buf[64];
+    const char* fmts[] = {"%d", " x %d"};
+    for(int i = 0; i < dims.size(); ++i){
+        snprintf(buf, sizeof(buf), fmts[i != 0], dims[i]);
+        output << buf;
+    }
+    return output.str();
+}
 
 YOLOv5::YOLOv5(common::params inputparams){
     onnxPath = inputparams.onnxPath;
@@ -59,8 +69,40 @@ void YOLOv5::onnxToTrtModel(const std::string &modelfile,
     // Build the engine
     builder->setMaxBatchSize(BATCH_SIZE);
     auto config = builder->createBuilderConfig();
-    config->setMaxWorkspaceSize(1<<20);
-    // config->setFlag(nvinfer1::BuilderFlag::kFP16);
+    config->setMaxWorkspaceSize(1<<30);
+
+    int net_num_input = network->getNbInputs();
+    printf("Network has %d inputs:", net_num_input);
+    std::vector<std::string> input_names(net_num_input);
+    for(int i = 0; i < net_num_input; ++i){
+        auto tensor = network->getInput(i);
+        auto dims = tensor->getDimensions();
+        auto dims_str = join_dims(std::vector<int>(dims.d, dims.d+dims.nbDims));
+        printf("      %d.[%s] shape is %s", i, tensor->getName(), dims_str.c_str());
+
+        input_names[i] = tensor->getName();
+    }
+
+    int net_num_output = network->getNbOutputs();
+    printf("Network has %d outputs:", net_num_output);
+    for(int i = 0; i < net_num_output; ++i){
+        auto tensor = network->getOutput(i);
+        auto dims = tensor->getDimensions();
+        auto dims_str = join_dims(std::vector<int>(dims.d, dims.d+dims.nbDims));
+        printf("      %d.[%s] shape is %s", i, tensor->getName(), dims_str.c_str());
+    }
+
+    auto profile = builder->createOptimizationProfile();
+    for(int i = 0; i < net_num_input; ++i){
+        auto input = network->getInput(i);
+        auto input_dims = input->getDimensions();
+        input_dims.d[0] = 1;
+        profile->setDimensions(input->getName(), nvinfer1::OptProfileSelector::kMIN, input_dims);
+        profile->setDimensions(input->getName(), nvinfer1::OptProfileSelector::kOPT, input_dims);
+        input_dims.d[0] = BATCH_SIZE;
+        profile->setDimensions(input->getName(), nvinfer1::OptProfileSelector::kMAX, input_dims);
+    }
+    config->addOptimizationProfile(profile);
 
     std::cout << "start building engine" << std::endl;
     engine = builder->buildEngineWithConfig(*network, *config);
@@ -169,45 +211,16 @@ std::vector<int> YOLOv5::getInputSize() {
     return {dims.d[2], dims.d[3]};
 }
 
-std::vector<float> YOLOv5::prepareImage(cv::Mat &image){
-//    auto dims = engine->getBindingDimensions(0);
-//    std::vector<int> inputSize={dims.d[2],dims.d[3]};
-//    int input_w=inputSize[1];
-//    int input_h=inputSize[0];
-    int input_w=IMAGE_WIDTH;
-    int input_h=IMAGE_HEIGHT;
-    float ratio = 1.0*input_w/image.cols<1.0*input_h/image.rows ? 1.0*input_w/image.cols : 1.0*input_h/image.rows;
-    cv::Mat flt_img = cv::Mat::zeros(cv::Size(input_w, input_h), CV_8UC3);
-    cv::Mat rsz_img;
-    cv::resize(image, rsz_img, cv::Size(), ratio, ratio);
-    rsz_img.copyTo(flt_img(cv::Rect(0, 0, rsz_img.cols, rsz_img.rows)));
-    flt_img.convertTo(flt_img, CV_32FC3, 1.0 / 255);
-
-    int channels=3;
-    int channelLength=input_w* input_h;
-    std::vector<float> result(channels* input_h * input_w);
-    float *data=result.data();
-
-    std::vector<cv::Mat> split_img={
-        cv::Mat(input_h,input_w,CV_32FC1,data+channelLength*2),
-        cv::Mat(input_h,input_w,CV_32FC1,data+channelLength*1),
-        cv::Mat(input_h,input_w,CV_32FC1,data+channelLength*0)
-    };
-    cv::split(flt_img, split_img);
-
-    return result;
-}
-
 void YOLOv5::inferenceImage(cv::Mat image)
 {
     std::vector<float> data=v5prepareImage(image);
 
     //get buffers
-    assert(engine->getNbBindings() == 4);
-    //buffers num == engine->getNbBindings()
-    void *buffers_new[4];
+    int nbBindings=2;
+    assert(engine->getNbBindings() == nbBindings);
+    void *buffers_new[nbBindings];
     std::vector<int64_t> bufferSize;
-    int nbBindings = engine->getNbBindings();
+    // int nbBindings = engine->getNbBindings();
     bufferSize.resize(nbBindings);
 
     for (int i = 0; i < nbBindings; ++i) {
@@ -215,14 +228,14 @@ void YOLOv5::inferenceImage(cv::Mat image)
         nvinfer1::DataType dtype = engine->getBindingDataType(i);
         int64_t totalSize = volume(dims) * 1 * getElementSize(dtype);
         bufferSize[i] = totalSize;
-        std::cout << "binding" << i << ": " << totalSize << std::endl;
+        // std::cout << "binding" << i << ": " << totalSize << std::endl;
         cudaMalloc(&buffers_new[i], totalSize);
     }
 
     cudaStream_t stream = nullptr;
     cudaStreamCreate(&stream);
 
-    std::cout << "host2device" << std::endl;
+    // std::cout << "host2device" << std::endl;
     cudaMemcpyAsync(buffers_new[0], data.data(), bufferSize[0], cudaMemcpyHostToDevice, stream);
 
     context = engine->createExecutionContext();
@@ -233,53 +246,34 @@ void YOLOv5::inferenceImage(cv::Mat image)
     int outSize1 = bufferSize[1] / sizeof(float) / BATCH_SIZE;
     auto *out1 = new float[outSize1 * BATCH_SIZE];
     cudaMemcpyAsync(out1, buffers_new[1], bufferSize[1], cudaMemcpyDeviceToHost, stream);
-    int outSize2 = bufferSize[2] / sizeof(float) / BATCH_SIZE;
-    auto *out2 = new float[outSize2 * BATCH_SIZE];
-    cudaMemcpyAsync(out2, buffers_new[2], bufferSize[2], cudaMemcpyDeviceToHost, stream);
-    int outSize3 = bufferSize[3] / sizeof(float) / BATCH_SIZE;
-    auto *out3 = new float[outSize3 * BATCH_SIZE];
-    cudaMemcpyAsync(out3, buffers_new[3], bufferSize[3], cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
 
+    nvinfer1::Dims outdims = engine->getBindingDimensions(1);
+    int batches= outdims.d[0];
+    int num_boxes = outdims.d[1];
+    int num_classes = outdims.d[2]-5;
     std::vector<DetectRes> result;
-    std::vector<float *> output={out1,out2,out3};
-    
-    float ratio = float(image.cols) / float(IMAGE_WIDTH) > float(image.rows) / float(IMAGE_HEIGHT)  ? float(image.cols) / float(IMAGE_WIDTH) : float(image.rows) / float(IMAGE_HEIGHT);
-    std::vector<int> stride = std::vector<int> {8, 16, 32};
-    std::vector<std::vector<int>> grids = {
-                {3, int(IMAGE_WIDTH / stride[0]), int(IMAGE_HEIGHT / stride[0])},
-                {3, int(IMAGE_WIDTH / stride[1]), int(IMAGE_HEIGHT / stride[1])},
-                {3, int(IMAGE_WIDTH / stride[2]), int(IMAGE_HEIGHT / stride[2])},
-        };
-    std::vector<std::vector<int>> anchors={{10,13}, {16,30}, {33,23}, {30,61}, {62,45}, {59,119}, {116,90}, {156,198}, {373,326}};
-    for(int n=0;n<(int)grids.size();n++)
-    {
-        int position=0;
-        for(int c=0;c<grids[n][0];c++)
-        {
-            std::vector<int> anchor=anchors[n*grids[n][0]+c];
-            for(int h=0;h<grids[n][1];h++)
-            {
-                for(int w=0;w<grids[n][2];w++)
-                {
-                    float *row=output[n]+position*(80+5);
-                    position++;
-                    DetectRes box;
-                    auto max_pos=std::max_element(row+5,row+80+5);
-                    box.prob=Logist(row[4])*Logist(row[max_pos-row]);
-                    if (box.prob < 0.5)
-                        continue;
-                    box.classes=max_pos-row-5;
-                    box.x = (Logist(row[0]) * 2 - 0.5 + w) / grids[n][1] * IMAGE_WIDTH * ratio;
-                    box.y = (Logist(row[1]) * 2 - 0.5 + h) / grids[n][2] * IMAGE_HEIGHT * ratio;
-                    box.w = pow(Logist(row[2]) * 2.f, 2) * anchor[0] * ratio;
-                    box.h = pow(Logist(row[3]) * 2.f, 2) * anchor[1] * ratio;
-                    result.push_back(box);
-                }
-            }
-        }
+    std::vector<float *> output={out1};
 
+    float confidence_threshold=0.5;
+    for(int b=0;b<batches;b++){
+        for(int num_box=0;num_box<num_boxes;num_box++){
+            float* pitem = out1 + (5 + num_classes) * num_box+b*num_boxes;
+            float objectness = pitem[4];
+            if (objectness < confidence_threshold)
+                continue;
+            DetectRes box;
+            auto max_pos=std::max_element(pitem+5,pitem+num_classes+5);
+            box.classes=max_pos-pitem-5;
+            box.prob=objectness;
+            box.x=pitem[0];
+            box.y=pitem[1];
+            box.w=pitem[2];
+            box.h=pitem[3];
+            result.push_back(box);
+        }
     }
+    
     NmsDetect(result);
 
     //v5prepareImage for x,y

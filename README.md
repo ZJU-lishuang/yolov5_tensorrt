@@ -18,7 +18,7 @@ make
 ## TENSORRT ONNX PLUGIN
 
 ### STEP1:add a plugin layer in onnx
-* in project [yolov5](https://github.com/ZJU-lishuang/yolov5-v4)
+* in project [yolov5](https://github.com/ZJU-lishuang/yolov5_convert/tree/main/yolov5)
 
 `export PYTHONPATH="$PWD" && python models/export_plugin_onnx.py --weights ./weights/yolov5s.pt --img 640 --batch 1`
 

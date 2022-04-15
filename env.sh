@@ -1,1 +1,1 @@
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ls/softwares/TensorRT-8.2.3.0/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ls/softwares/TensorRT/lib

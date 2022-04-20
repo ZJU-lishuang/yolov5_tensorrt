@@ -3,6 +3,7 @@
 #include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
 #include <numeric>
+#include <time.h>
 
 __device__ float Logist(float data) { return 1.0f / (1.0f + expf(-data)); };
 
@@ -213,7 +214,10 @@ std::vector<int> YOLOv5::getInputSize() {
 
 void YOLOv5::inferenceImage(cv::Mat image)
 {
+    time_t begin_t = clock();
     std::vector<float> data=v5prepareImage(image);
+    time_t end_t = clock();
+    std::cout<<"speeds one pre "<< (double)(end_t-begin_t)/CLOCKS_PER_SEC<<" s"<<std::endl;
 
     //get buffers
     int nbBindings=2;
@@ -240,8 +244,10 @@ void YOLOv5::inferenceImage(cv::Mat image)
 
     context = engine->createExecutionContext();
     assert(context != nullptr);
-
+    time_t start_t = clock();
     context->execute(BATCH_SIZE,buffers_new);
+    end_t = clock();
+    std::cout<<"speeds one execute "<< (double)(end_t-start_t)/CLOCKS_PER_SEC<<" s"<<std::endl;
 
     int outSize1 = bufferSize[1] / sizeof(float) / BATCH_SIZE;
     auto *out1 = new float[outSize1 * BATCH_SIZE];
@@ -273,9 +279,11 @@ void YOLOv5::inferenceImage(cv::Mat image)
             result.push_back(box);
         }
     }
-    
+    start_t = clock();
     NmsDetect(result);
-
+    time_t finish_t = clock();
+    std::cout<<"speeds one post "<< (double)(finish_t-start_t)/CLOCKS_PER_SEC<<" s"<<std::endl;
+    std::cout<<"speeds one infer "<< (double)(finish_t-begin_t)/CLOCKS_PER_SEC<<" s"<<std::endl;
     //v5prepareImage for x,y
     int w, h, x=0, y=0;
     int input_w=IMAGE_WIDTH;

@@ -17,9 +17,6 @@ struct TrtDestroyer
 template <typename T>
 using TrtUniquePtr = std::unique_ptr<T, TrtDestroyer<T>>;
 
-// template <typename T>
-// using TrtSharedPtr = std::shared_ptr<T, TrtDestroyer<T>>;
-
 static bool save_file(const string& file, const void* data, size_t length){
 
     FILE* f = fopen(file.c_str(), "wb");

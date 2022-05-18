@@ -1,4 +1,6 @@
+bin
 build
+lib
 .vscode
 *.so
 model/*

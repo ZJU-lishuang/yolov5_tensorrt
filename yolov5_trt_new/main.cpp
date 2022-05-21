@@ -1,9 +1,23 @@
 #include "src/module/builder/trt_builder.h"
+#include "src/module/infer/trt_infer.h"
 #include "src/module/core/trt_tensor.h"
 #include "src/module/common/ilogger.h"
 #include <cuda_runtime.h>
 
+#include <unistd.h>
+
 using namespace TRT;
+
+static bool exists(const std::string& path){
+    return access(path.c_str(), R_OK) == 0;
+}
+
+void set_device(int device_id) {
+    if (device_id == -1)
+        return;
+
+    checkCudaRuntime(cudaSetDevice(device_id));
+}
 
 static void test_tensor1(){
 
@@ -66,14 +80,49 @@ static void lesson1(){
     unsigned int max_batch_size = 16;
     size_t max_workspace_size = 1<<30;
     compile(mode,max_batch_size,onnx_file,engine_file);
+}
+
+static void lesson2(){
+    int gpuid = 0;
+    /*  设置使用GPU */
+    set_device(gpuid);
+
+    std::string onnx_file = "../weights/yolov5n.onnx";
+    std::string engine_file = "../weights/yolov5n.engine";
+    if(!exists(engine_file)){
+        auto mode = Mode::FP32;
+        unsigned int max_batch_size = 16;
+        size_t max_workspace_size = 1<<30;
+        compile(mode,max_batch_size,onnx_file,engine_file);
+    }
+
+    std::shared_ptr<TRTInferImpl> infer(new TRTInferImpl());
+    infer->load(engine_file);
+    if(infer == nullptr){
+        printf("Engine %s load failed", engine_file.c_str());
+        // 解除主线程阻塞，模型加载失败
+        return;
+    }
+    /* 打印引擎相关信息 */
+    infer->print();
+
+    /* 获取引擎的相关信息 */
+    int max_batch_size = infer->get_max_batch_size();
+    auto input         = infer->tensor("images");
+    auto output        = infer->tensor("output");
+    int num_classes    = output->size(2) - 5;
+
+    // auto image = cv::imread("inference/gril.jpg");
+    
 
 }
 
 int main(){
     
     // lesson1();
-    test_tensor1();
-    test_tensor2();
-    test_tensor3();
+    lesson2();
+    // test_tensor1();
+    // test_tensor2();
+    // test_tensor3();
     return 0;
 }

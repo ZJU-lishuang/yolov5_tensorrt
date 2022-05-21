@@ -3,9 +3,6 @@
 
 #include "../core/trt_tensor.h"
 #include "../common/cuda_tools.h"
-// #include <NvInfer.h>
-
-// using namespace nvinfer1;
 
 namespace TRT
 {

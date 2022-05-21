@@ -17,7 +17,7 @@ struct TrtDestroyer
 template <typename T>
 using TrtUniquePtr = std::unique_ptr<T, TrtDestroyer<T>>;
 
-static bool save_file(const string& file, const void* data, size_t length){
+static bool save_file(const std::string& file, const void* data, size_t length){
 
     FILE* f = fopen(file.c_str(), "wb");
     if (!f) return false;

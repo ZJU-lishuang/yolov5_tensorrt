@@ -4,7 +4,6 @@
 #include <functional>
 #include <string>
 
-using namespace std;
 namespace TRT{
 
 enum class Mode:int{
@@ -16,8 +15,8 @@ enum class Mode:int{
 bool compile(
     Mode mode,
     unsigned int max_batch_size,
-    const string& source_onnx,
-    const string& saveto,
+    const std::string& source_onnx,
+    const std::string& saveto,
     size_t max_workspace_size = 1<<30
 );
 

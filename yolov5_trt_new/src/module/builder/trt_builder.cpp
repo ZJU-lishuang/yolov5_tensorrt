@@ -1,42 +1,15 @@
 #include "trt_builder.h"
 #include "../common/ilogger.h"
 #include "../common/utils.h"
+#include "../common/cuda_tools.h"
 #include <NvOnnxParser.h>
 #include <sstream>
 #include <chrono>
 
 using namespace nvinfer1;
-
-class Logger : public ILogger {
-public:
-    virtual void log(Severity severity, const char* msg) noexcept override {
-
-        if (severity == Severity::kINTERNAL_ERROR) {
-            INFOE("NVInfer INTERNAL_ERROR: %s", msg);
-            abort();
-        }else if (severity == Severity::kERROR) {
-            INFOE("NVInfer: %s", msg);
-        }
-        else  if (severity == Severity::kWARNING) {
-            INFOW("NVInfer: %s", msg);
-        }
-        else  if (severity == Severity::kINFO) {
-            INFOD("NVInfer: %s", msg);
-        }
-        else {
-            INFOD("%s", msg);
-        }
-    }
-};
-
-static Logger gLogger;
+using namespace std;
 
 namespace TRT{
-
-template<typename _T>
-static void destroy_nvidia_pointer(_T* ptr) {
-    if (ptr) ptr->destroy();
-}
 
 static string join_dims(const vector<int>& dims){
     stringstream output;

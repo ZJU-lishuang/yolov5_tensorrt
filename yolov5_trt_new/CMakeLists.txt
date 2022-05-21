@@ -59,12 +59,14 @@ PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/src/module/common/ilogger.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/module/common/cuda_tools.cpp
   ${CMAKE_CURRENT_LIST_DIR}/src/module/core/trt_tensor.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/module/infer/trt_infer.cpp
 INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/src/module/builder/trt_builder.h
   ${CMAKE_CURRENT_LIST_DIR}/src/module/common/ilogger.h
   ${CMAKE_CURRENT_LIST_DIR}/src/module/common/cuda_tools.h
   ${CMAKE_CURRENT_LIST_DIR}/src/module/common/utils.h
   ${CMAKE_CURRENT_LIST_DIR}/src/module/core/trt_tensor.h
+  ${CMAKE_CURRENT_LIST_DIR}/src/module/infer/trt_infer.h
 )
 
 

@@ -49,14 +49,12 @@ bool compile(
 
     INFO("Compile %s %s.", mode_string(mode), source_onnx.c_str());
     shared_ptr<IBuilder> builder(createInferBuilder(gLogger), destroy_nvidia_pointer<IBuilder>);
-    // TrtSharedPtr<IBuilder> builder{createInferBuilder(gLogger)};
     if (builder == nullptr) {
         INFOE("Can not create builder.");
         return false;
     }
 
     shared_ptr<IBuilderConfig> config(builder->createBuilderConfig(), destroy_nvidia_pointer<IBuilderConfig>);
-    // TrtSharedPtr<IBuilderConfig> config{builder->createBuilderConfig()};
     if (mode == Mode::FP16) {
         if (!builder->platformHasFastFp16()) {
             INFOW("Platform not have fast fp16 support");

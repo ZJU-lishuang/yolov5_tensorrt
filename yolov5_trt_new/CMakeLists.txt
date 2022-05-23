@@ -50,6 +50,9 @@ set(TRT_LIB libnvinfer.so libnvonnxparser.so cudart.so)
 # 链接依赖库
 # link_libraries(onnxplugin)
 
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O0 -Wfatal-errors -pthread -w -g")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${CUDA_GEN_CODE}")
+
 ADD_EXECUTABLE(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} ${TRT_LIB} ${OpenCV_LIBS} ${CUDA_LIBRARIES})
 

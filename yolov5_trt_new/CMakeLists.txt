@@ -69,6 +69,14 @@ INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/src/module/infer/trt_infer.h
 )
 
+target_sources(${PROJECT_NAME}
+PRIVATE
+  ${CMAKE_CURRENT_LIST_DIR}/src/application/yolov5/yolo.cpp
+INTERFACE
+  ${CMAKE_CURRENT_LIST_DIR}/src/application/yolov5/yolo.h
+
+)
+
 
 
 

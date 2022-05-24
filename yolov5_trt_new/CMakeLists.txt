@@ -5,81 +5,54 @@ project(yolov5tensorrt)
 #可执行文件保存目录
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
+option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_BUILD_TYPE Debug)
+
+set(CUDA_GEN_CODE "-gencode=arch=compute_86,code=sm_86")
+
+#cuda
+find_package(CUDA REQUIRED)
 #自定义opencv路径
 set(OpenCV_DIR /home/ls/softwares/opencv-4.5.5/build)
 # find opencv
 find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-message(STATUS "Find OpenCV include at ${OpenCV_INCLUDE_DIRS}")
-message(STATUS "Find OpenCV libraries: ${OpenCV_LIBRARIES}")
-
 if(NOT OpenCV_FOUND)
     message(ERROR "OpenCV not found!")
 endif(NOT OpenCV_FOUND)
-#cuda
-find_package(CUDA REQUIRED)
-# enable_language(CUDA)
-message(STATUS "CUDA_LIBRARIES => ${CUDA_LIBRARIES}")
-message(STATUS "CUDA_INCLUDE_DIRS => ${CUDA_INCLUDE_DIRS}")
-include_directories("/usr/local/cuda/include")
-link_directories("/usr/local/cuda/lib64" "/usr/lib" /usr/lib/x86_64-linux-gnu )
 #tensorrt
 # set(TensorRT_DIR /home/ls/softwares/TensorRT-8.2.3.0)
 set(TensorRT_DIR /home/ls/softwares/TensorRT)
-if(DEFINED TensorRT_DIR)
-  include_directories("${TensorRT_DIR}/include")
-  link_directories("${TensorRT_DIR}/lib")
-endif(DEFINED TensorRT_DIR)
-include_directories(${CUDA_INCLUDE_DIRS})
-message(STATUS "TensorRT Header => ${TensorRT_DIR}/include")
-message(STATUS "TensorRT Lib => ${TensorRT_DIR}/lib")
 
-set(TRT_LIB libnvinfer.so libnvonnxparser.so cudart.so)
-# 链接子项目部件
-# add_subdirectory(${CMAKE_SOURCE_DIR}/module)
-# include_directories(${CMAKE_SOURCE_DIR}/module/include)
-# 链接子项目部件
-# add_subdirectory(${CMAKE_SOURCE_DIR}/onnxplugin)
-# include_directories(${CMAKE_SOURCE_DIR}/onnxplugin/include)
+include_directories(
+  ${OpenCV_INCLUDE_DIRS}
+  ${CUDA_INCLUDE_DIRS}
+  ${TensorRT_DIR}/include
+)
 
-# 链接库目录
-# link_directories(${CMAKE_SOURCE_DIR}/lib)
-# 链接依赖库
-# link_libraries(module)
-# 链接依赖库
-# link_libraries(onnxplugin)
+link_directories(
+    ${TensorRT_DIR}/lib
+    /usr/local/cuda/lib64
+)
 
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -O0 -Wfatal-errors -pthread -w -g")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${CUDA_GEN_CODE}")
 
+# 链接子项目部件
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/module)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/application)
+
+# 链接库目录
+link_directories(${CMAKE_SOURCE_DIR}/lib)
+# 链接依赖库
+link_libraries(module)
+link_libraries(application)
+
 ADD_EXECUTABLE(${PROJECT_NAME} main.cpp)
-target_link_libraries(${PROJECT_NAME} ${TRT_LIB} ${OpenCV_LIBS} ${CUDA_LIBRARIES})
-
-target_sources(${PROJECT_NAME}
-PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/builder/trt_builder.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/common/ilogger.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/common/cuda_tools.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/core/trt_tensor.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/infer/trt_infer.cpp
-INTERFACE
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/builder/trt_builder.h
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/common/ilogger.h
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/common/cuda_tools.h
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/common/utils.h
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/core/trt_tensor.h
-  ${CMAKE_CURRENT_LIST_DIR}/src/module/infer/trt_infer.h
-)
-
-target_sources(${PROJECT_NAME}
-PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}/src/application/yolov5/yolo.cpp
-INTERFACE
-  ${CMAKE_CURRENT_LIST_DIR}/src/application/yolov5/yolo.h
-
-)
-
+target_link_libraries(${PROJECT_NAME} nvinfer nvonnxparser)
+target_link_libraries(${PROJECT_NAME} cuda cublas cudart cudnn)
+target_link_libraries(${PROJECT_NAME} pthread)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
 
 

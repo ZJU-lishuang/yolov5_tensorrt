@@ -41,12 +41,14 @@ set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O0 -Xcompiler -fPIC -g -w ${
 # 链接子项目部件
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/module)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/application)
-
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/onnxplugin)
+# include_directories(${CMAKE_SOURCE_DIR}/src/onnxplugin/include)
 # 链接库目录
 link_directories(${CMAKE_SOURCE_DIR}/lib)
 # 链接依赖库
 link_libraries(module)
 link_libraries(application)
+link_libraries(onnxplugin)
 
 ADD_EXECUTABLE(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} nvinfer nvonnxparser)

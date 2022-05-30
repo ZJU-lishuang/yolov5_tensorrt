@@ -3,6 +3,7 @@
 #include "src/module/core/trt_tensor.h"
 #include "src/module/common/ilogger.h"
 #include "src/application/yolov5/yolo.h"
+#include "src/onnxplugin/include/SiLUPlugin.h"
 #include <cuda_runtime.h>
 
 #include <unistd.h>
@@ -88,8 +89,10 @@ static void lesson2(){
     /*  设置使用GPU */
     set_device(gpuid);
 
-    std::string onnx_file = "../weights/yolov5n.onnx";
-    std::string engine_file = "../weights/yolov5n.engine";
+    // std::string onnx_file = "../weights/yolov5n.onnx";
+    // std::string engine_file = "../weights/yolov5n.engine";
+    std::string onnx_file = "../weights/yolov5n.plugin.onnx";
+    std::string engine_file = "../weights/yolov5n.plugin.engine";
     if(!exists(engine_file)){
         auto mode = Mode::FP32;
         unsigned int max_batch_size = 16;

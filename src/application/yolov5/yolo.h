@@ -14,7 +14,7 @@ struct DetectRes{
     float prob;
 };
 
-std::vector<float> v5prepareImage(cv::Mat &image,const int input_w,const int input_h);
+std::vector<float> v5prepareImage(const cv::Mat &image,const int input_w,const int input_h);
 
 void NmsDetect(std::vector<DetectRes> &detections);
 

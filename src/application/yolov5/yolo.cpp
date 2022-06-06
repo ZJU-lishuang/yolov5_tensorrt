@@ -2,7 +2,7 @@
 
 namespace YOLOV5{
 
-std::vector<float> v5prepareImage(cv::Mat &image,const int input_w,const int input_h){
+std::vector<float> v5prepareImage(const cv::Mat &image,const int input_w,const int input_h){
 
     int w, h, x, y;
     // int input_w=IMAGE_WIDTH;

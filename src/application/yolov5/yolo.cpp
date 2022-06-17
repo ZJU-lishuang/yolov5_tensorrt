@@ -1,7 +1,6 @@
 #include "yolo.h"
 #include "../../module/core/async_infer.h"
 #include "../../module/infer/trt_infer.h"
-
 namespace YOLOV5{
 
 using namespace TRT;
@@ -66,7 +65,7 @@ public:
         input->resize_single_dim(0, max_batch_size).to_gpu();
 
         std::vector<Job> fetch_jobs;
-
+        
         while(get_jobs_and_wait(fetch_jobs, max_batch_size)){
             /* 一旦进来说明有图片数据 ，获取图片的张数 */
             int infer_batch_size = fetch_jobs.size();
@@ -76,38 +75,52 @@ public:
             for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
                 auto& job  = fetch_jobs[ibatch];
                 auto& mono = job.mono_tensor->data();
-                // affin_matrix_device.copy_from_gpu(affin_matrix_device.offset(ibatch), mono->get_workspace()->gpu(), 6);
                 input->copy_from_gpu(input->offset(ibatch), mono->gpu(), mono->count());
                 job.mono_tensor->release();
             }
             /* 开始推理 */
             engine->forward(false);
-            // output_array_device.to_gpu(false);
             /* 下面进行解码 */
             for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
-                
                 auto& job                 = fetch_jobs[ibatch];/* 图片数据 */
                 float* image_based_output = output->gpu<float>(ibatch);
-                // float* output_array_ptr   = output_array_device.gpu<float>(ibatch);
-                // auto affine_matrix        = affin_matrix_device.gpu<float>(ibatch);
-                // checkCudaRuntime(cudaMemsetAsync(output_array_ptr, 0, sizeof(int), stream_));
-                // decode_kernel_invoker(image_based_output, output->size(1), num_classes, confidence_threshold_, nms_threshold_, affine_matrix, output_array_ptr, MAX_IMAGE_BBOX, stream_);
-            }
-
-            // output_array_device.to_cpu();
-            for(int ibatch = 0; ibatch < infer_batch_size; ++ibatch){
-                // float* parray = output_array_device.cpu<float>(ibatch);
-                // int count     = min(MAX_IMAGE_BBOX, (int)*parray);
-                auto& job     = fetch_jobs[ibatch];
                 auto& image_based_boxes   = job.output;
-                // for(int i = 0; i < count; ++i){
-                //     float* pbox  = parray + 1 + i * NUM_BOX_ELEMENT;
-                //     int label    = pbox[5];
-                //     int keepflag = pbox[6];
-                //     if(keepflag == 1){
-                //         image_based_boxes.emplace_back(pbox[0], pbox[1], pbox[2], pbox[3], pbox[4], label);
-                //     }
-                // }
+
+                std::vector<YOLOV5::DetectRes> result;
+                float confidence_threshold=0.5;
+                int num_boxes = output->size(1);
+                for(int b=0;b<infer_batch_size;b++){
+                    float* image_based_output = output->cpu<float>(b);
+                    for(int num_box=0;num_box<num_boxes;num_box++){
+                        float* pitem = image_based_output + (5 + num_classes) * num_box+b*num_boxes;
+                        float objectness = pitem[4];
+                        if (objectness < confidence_threshold)
+                            continue;
+                        YOLOV5::DetectRes box;
+                        auto max_pos=std::max_element(pitem+5,pitem+num_classes+5);
+                        box.classes=max_pos-pitem-5;
+                        box.prob=objectness;
+                        box.x=pitem[0];
+                        box.y=pitem[1];
+                        box.w=pitem[2];
+                        box.h=pitem[3];
+
+                        result.push_back(box);
+                    }
+                }
+
+                YOLOV5::NmsDetect(result);
+                
+                //show result in image
+                for (auto it: result){
+                    float score = it.prob;
+                    int label = it.classes;
+                    int xmin=it.x-it.w/2;
+                    int xmax=it.x+it.w/2;
+                    int ymin=it.y-it.h/2;
+                    int ymax=it.y+it.h/2;
+                    image_based_boxes.emplace_back(xmin, ymin, xmax, ymax, score, label);
+                }
                 job.pro->set_value(image_based_boxes);
             }
             fetch_jobs.clear();
@@ -146,18 +159,18 @@ public:
         tensor->resize(1, 3, input_height_, input_width_);
 
         size_t size_image      = input_width_ * input_height_ * 3;
-        auto workspace         = tensor->get_workspace();
-        float* gpu_workspace  = (float*)workspace->gpu(size_image);
+        auto workspace         = tensor->get_data();
+        float* gpu_workspace  = (float*)workspace->gpu(size_image*sizeof(float));
         float* image_device         = gpu_workspace;
 
-        float* cpu_workspace        = (float*)workspace->cpu(size_image);
+        float* cpu_workspace        = (float*)workspace->cpu(size_image*sizeof(float));
         float* image_host           = cpu_workspace;
         
         std::vector<float> data = YOLOV5::v5prepareImage(image,input_width_,input_height_);
-        memcpy(image_host, data.data(), size_image);
+        memcpy(image_host, data.data(), size_image*sizeof(float));
         // checkCudaRuntime(cudaMemcpyAsync(image_device, data.data(), size_image*sizeof(float), cudaMemcpyHostToDevice, stream_));
         // checkCudaRuntime(cudaMemcpyAsync(image_device, image_host, size_image*sizeof(float), cudaMemcpyHostToDevice, stream_));
-        checkCudaRuntime(cudaMemcpyAsync(image_device, image_host, size_image, cudaMemcpyHostToDevice, stream_));
+        checkCudaRuntime(cudaMemcpyAsync(image_device, image_host, size_image*sizeof(float), cudaMemcpyHostToDevice, stream_));
 
         return true;
     }
